@@ -1,0 +1,165 @@
+@struct LspTextDocumentSync: {
+    change: i32,
+    openClose: bool,
+    save: bool
+}
+@struct LspSignatureHelpProvider: {
+    triggerCharacters: @array(numTriggerCharacters) string,
+}
+@struct LspSemanticTokensProviderLegend: {
+    tokenModifiers: @array(numTokenModifiers) string,
+    tokenTypes: @array(numTokenTypes) string,
+}
+@struct LspSematicTokensProviderFull: {
+    delta: bool
+}
+@struct LspSemanticTokensProvider: {
+      full: LspSematicTokensProviderFull,
+      legend: LspSemanticTokensProviderLegend,
+      range: bool,
+}
+@struct LspExecuteCommandProvider: {
+    commands: @array(numCommands) string,
+}
+@struct LspDocumentOnTypeFormattingProvider: {
+    firstTriggerCharacter: string,
+    moreTriggerCharacter: @array(numMoreTriggerCharacters) string,
+}
+@struct LspDocumentLinkProvider: {
+    resolveProvider: bool,
+}
+@struct LspCompletionProvider: {
+    allCommitCharacters: @array(numCommitCharacters) string,
+    resolveProvider: bool,
+    triggerCharacters: @array(numTriggerCharacters) string,
+}
+
+@struct LspCapabilities: {
+    positionEncoding: string,
+    codeActionProvider: bool,
+    completionProvider: LspCompletionProvider,
+    declarationProvider: bool,
+    definitionProvider: bool,
+    documentFormattingProvider: bool,
+    documentHighlightProvider: bool,
+    documentLinkProvider: LspDocumentLinkProvider,
+    documentOnTypeFormattingProvider: LspDocumentOnTypeFormattingProvider,
+    documentRangeFormattingProvider: bool,
+    documentSymbolProvider: bool,
+    executeCommandProvider: LspExecuteCommandProvider,
+    hoverProvider: bool,
+    referencesProvider: bool,
+    renameProvider: bool,
+    selectionRangeProvider: bool,
+    semanticTokensProvider: LspSemanticTokensProvider,
+    signatureHelpProvider: LspSignatureHelpProvider,
+    textDocumentSync: LspTextDocumentSync,
+    typeHierarchyProvider: bool,
+    workspaceSymbolProvider: bool
+}
+
+@struct LspServerInfo: {
+    name: string,
+    version: string,
+}
+
+@struct InitializeResult: {
+    capabilities: LspCapabilities,
+    serverInfo: LspServerInfo,
+}
+
+@struct InitializeResponse: {
+    id: i32,
+    jsonrpc: string,
+    result: InitializeResult,
+}
+
+@struct Error: {
+    code: i32,
+    message: string,
+}
+@struct ShutdownResponse: {
+    id: i32,
+    jsonrpc: string,
+    error: Error
+}
+
+@struct Position: {
+    line: i32,
+    character: i32,
+}
+@struct Range: {
+    start: Position,
+    end: Position,
+}
+@struct Location: {
+    uri: string,
+    range: Range,
+}
+@struct SymbolInformation: {
+	name: string;
+	kind: i32;
+	location: Location;
+}
+
+@struct DocumentSymbolsResponse: {
+    result: @array(count) SymbolInformation;
+}
+
+// Client Side Requests
+// TODO: replace this with an `@optional` tag
+@struct Empty: {}
+@struct InitializeRequestParams: {
+    capabilities: Empty,
+    rootUri: string,
+    processId: i32,
+}
+@struct InitializeRequest: {
+    id: i32,
+    jsonrpc: string,
+    method: string,
+    params: InitializeRequestParams,
+}
+@struct InitializedNotification: {
+    jsonrpc: string,
+    method: string,
+    params: Empty
+}
+
+@struct ShutdownRequest: {
+    id: i32,
+    jsonrpc: string,
+    method: string,
+}
+@struct ExitNotification: {
+    jsonrpc: string,
+    method: string,
+}
+
+@struct TextDocumentItem: {
+    uri: string,
+    languageId: string,
+    version: i32,
+    text: string,
+}
+@struct DidOpenTextDocumentParams: {
+    textDocument: TextDocumentItem,
+}
+@struct DidOpenTextDocumentNotification: {
+    jsonrpc: string,
+    method: string,
+    params: DidOpenTextDocumentParams,
+}
+
+@struct TextDocument: {
+    uri: string,
+}
+@struct DocumentSymbolsParams: {
+    textDocument: TextDocument,
+}
+@struct DocumentSymbolsRequest: {
+    id: i32,
+    jsonrpc: string,
+    method: string,
+    params: DocumentSymbolsParams,
+}
