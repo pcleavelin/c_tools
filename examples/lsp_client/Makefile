@@ -1,11 +1,8 @@
-all: structs source
+all: source
 
 CC=clang
 
-structs: lsp_model.metadesk
-	../../bin/better_structs lsp_model.metadesk
-
-source: list_symbols.c
+source: list_symbols.c ../../src/file_io/file_io.c
 	mkdir -p bin
-	$(CC) -I../../src/ -I../../thirdparty list_symbols.c -o bin/list_symbols
+	$(CC) -I../../src/ -I../../thirdparty ../../src/file_io/file_io.c list_symbols.c -o bin/list_symbols
 

@@ -34,56 +34,103 @@ void write_struct_to_file(Struct *s, FILE *out_file) {
         out_file = stdout;
     }
 
+    // Generate options for struct types
+    // for (int i=0;i<s->field_count;i++) {
+    //     Field *f = &s->fields[i];
+
+    //     // Cheat duplicates by using the C-preprocessor
+    //     if (f->type == FIELD_TYPE_STRUCT) {
+    //         fprintf(out_file, "#ifndef _%.*sOption\n", MD_S8VArg(f->struct_field_type_ref->string)); 
+    //         fprintf(out_file, "#define _%.*sOption\n", MD_S8VArg(f->struct_field_type_ref->string)); 
+    //         fprintf(out_file, "GenerateOptionType(%.*s);\n", MD_S8VArg(f->struct_field_type_ref->string));
+    //         fprintf(out_file, "#endif\n"); 
+    //     }
+    // }
+
     fprintf(out_file, "typedef struct %.*s {\n", MD_S8VArg(s->name));
 
     for (int i=0;i<s->field_count;i++) {
         Field *f = &s->fields[i];
 
-        // TODO: implement generated Option<T>'s
-        if (f->is_optional) {
-            fprintf(out_file, "    bool %.*s_is_some;\n", MD_S8VArg(f->name));
-        }
-
-        if (f->is_array) {
+        if (f->is_array && f->is_optional) {
             fprintf(out_file, "    long %.*s;\n", MD_S8VArg(f->array_count_name));
             switch (f->type) {
                 case FIELD_TYPE_I32:
-                    fprintf(out_file, "    long *%.*s;\n", MD_S8VArg(f->name));
+                    fprintf(out_file, "    Option(long *)");
                     break;
                 case FIELD_TYPE_F32:
-                    fprintf(out_file, "    float *%.*s;\n", MD_S8VArg(f->name));
+                    fprintf(out_file, "    Option(float *)");
                     break;
                 case FIELD_TYPE_BOOL:
-                    fprintf(out_file, "    bool *%.*s;\n", MD_S8VArg(f->name));
+                    fprintf(out_file, "    Option(_Bool *)");
                     break;
                 case FIELD_TYPE_STRING:
-                    fprintf(out_file, "    JsonString *%.*s;\n", MD_S8VArg(f->name));
+                    fprintf(out_file, "    Option(JsonString *)");
                     break;
                 case FIELD_TYPE_STRUCT:
-                    fprintf(out_file, "    %.*s *%.*s;\n", MD_S8VArg(f->struct_field_type_ref->string), MD_S8VArg(f->name));
+                    fprintf(out_file, "    Option(%.*s *)", MD_S8VArg(f->struct_field_type_ref->string));
+                    break;
+            }
+        } else if (f->is_optional) {
+            switch (f->type) {
+                case FIELD_TYPE_I32:
+                    fprintf(out_file, "    Option(long)");
+                    break;
+                case FIELD_TYPE_F32:
+                    fprintf(out_file, "    Option(float)");
+                    break;
+                case FIELD_TYPE_BOOL:
+                    fprintf(out_file, "    Option(_Bool)");
+                    break;
+                case FIELD_TYPE_STRING:
+                    fprintf(out_file, "    Option(JsonString)");
+                    break;
+                case FIELD_TYPE_STRUCT:
+                    fprintf(out_file, "    Option(%.*s)", MD_S8VArg(f->struct_field_type_ref->string));
+                    break;
+            }
+        } else if (f->is_array) {
+            fprintf(out_file, "    long %.*s;\n", MD_S8VArg(f->array_count_name));
+            switch (f->type) {
+                case FIELD_TYPE_I32:
+                    fprintf(out_file, "    long *");
+                    break;
+                case FIELD_TYPE_F32:
+                    fprintf(out_file, "    float *");
+                    break;
+                case FIELD_TYPE_BOOL:
+                    fprintf(out_file, "    _Bool *");
+                    break;
+                case FIELD_TYPE_STRING:
+                    fprintf(out_file, "    JsonString *");
+                    break;
+                case FIELD_TYPE_STRUCT:
+                    fprintf(out_file, "    %.*s *", MD_S8VArg(f->struct_field_type_ref->string));
                     break;
             }
         } else {
             switch (f->type) {
                 case FIELD_TYPE_I32:
-                    fprintf(out_file, "    long %.*s;\n", MD_S8VArg(f->name));
+                    fprintf(out_file, "    long");
                     break;
                 case FIELD_TYPE_F32:
-                    fprintf(out_file, "    float %.*s;\n", MD_S8VArg(f->name));
+                    fprintf(out_file, "    float");
                     break;
                 case FIELD_TYPE_BOOL:
-                    fprintf(out_file, "    bool %.*s;\n", MD_S8VArg(f->name));
+                    fprintf(out_file, "    _Bool");
                     break;
                 case FIELD_TYPE_STRING:
-                    fprintf(out_file, "    JsonString %.*s;\n", MD_S8VArg(f->name));
+                    fprintf(out_file, "    JsonString");
                     break;
                 case FIELD_TYPE_STRUCT:
-                    fprintf(out_file, "    %.*s %.*s;\n", MD_S8VArg(f->struct_field_type_ref->string), MD_S8VArg(f->name));
+                    fprintf(out_file, "    %.*s", MD_S8VArg(f->struct_field_type_ref->string));
                     break;
             }
         }
+        fprintf(out_file, " %.*s;\n", MD_S8VArg(f->name));
     }
     fprintf(out_file, "} %.*s;\n", MD_S8VArg(s->name));
+    fprintf(out_file, "GenerateOptionType(%.*s);\n", MD_S8VArg(s->name));
 }
 
 void write_struct_serializer_to_file(Struct *s, FILE *out_file) {
@@ -115,7 +162,7 @@ void write_struct_serializer_to_file(Struct *s, FILE *out_file) {
                     fprintf(out_file, "        serialize_bool_value(arena, buf, buf_size, index, data->%.*s[i], i > 0);\n", MD_S8VArg(f->name));
                     break;
                 case FIELD_TYPE_STRING:
-                    fprintf(out_file, "        serialize_string_value(arena, buf, buf_size, index, &data->%.*s[i], i > 0);\n", MD_S8VArg(f->name));
+                    fprintf(out_file, "        serialize_string_value(arena, buf, buf_size, index, data->%.*s[i], i > 0);\n", MD_S8VArg(f->name));
                     break;
                 case FIELD_TYPE_STRUCT:
                     fprintf(out_file, "        serialize_json_%.*s(arena, &data->%.*s[i], buf, buf_size, index);\n", MD_S8VArg(f->struct_field_type_ref->string), MD_S8VArg(f->name));
@@ -126,28 +173,54 @@ void write_struct_serializer_to_file(Struct *s, FILE *out_file) {
         } else {
             const char *leading_comma = i > 0 ? "true" : "false";
 
-            switch (f->type) {
-                case FIELD_TYPE_I32:
-                    fprintf(out_file, "    serialize_integer_field(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), leading_comma);
-                    break;
-                case FIELD_TYPE_F32:
-                    fprintf(out_file, "    serialize_float_field(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), leading_comma);
-                    break;
-                case FIELD_TYPE_BOOL:
-                    fprintf(out_file, "    serialize_bool_field(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), leading_comma);
-                    break;
-                case FIELD_TYPE_STRING:
-                    fprintf(out_file, "    serialize_string_field(arena, buf, buf_size, index, \"%.*s\", &data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), leading_comma);
-                    break;
-                case FIELD_TYPE_STRUCT:
-                    if (i > 0) {
+            if (f->is_optional) {
+                switch (f->type) {
+                    case FIELD_TYPE_I32:
+                        fprintf(out_file, "    serialize_integer_field_optional(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), leading_comma);
+                        break;
+                    case FIELD_TYPE_F32:
+                        fprintf(out_file, "    serialize_float_field_optional(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), leading_comma);
+                        break;
+                    case FIELD_TYPE_BOOL:
+                        fprintf(out_file, "    serialize_bool_field_optional(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), leading_comma);
+                        break;
+                    case FIELD_TYPE_STRING:
+                        fprintf(out_file, "    serialize_string_field_optional(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), leading_comma);
+                        break;
+                    case FIELD_TYPE_STRUCT:
+                        if (i > 0) {
 
-                        fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \",\\\"%.*s\\\":\");\n", MD_S8VArg(f->name));
-                    } else {
-                        fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \"\\\"%.*s\\\":\");\n", MD_S8VArg(f->name));
-                    }
-                    fprintf(out_file, "    serialize_json_%.*s(arena, &data->%.*s, buf, buf_size, index);\n", MD_S8VArg(f->struct_field_type_ref->string), MD_S8VArg(f->name));
-                    break;
+                            fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \",\\\"%.*s\\\":\");\n", MD_S8VArg(f->name));
+                        } else {
+                            fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \"\\\"%.*s\\\":\");\n", MD_S8VArg(f->name));
+                        }
+                        fprintf(out_file, "    serialize_json_%.*s_optional(arena, &data->%.*s, buf, buf_size, index);\n", MD_S8VArg(f->struct_field_type_ref->string), MD_S8VArg(f->name));
+                        break;
+                }
+            } else {
+                switch (f->type) {
+                    case FIELD_TYPE_I32:
+                        fprintf(out_file, "    serialize_integer_field(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), leading_comma);
+                        break;
+                    case FIELD_TYPE_F32:
+                        fprintf(out_file, "    serialize_float_field(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), leading_comma);
+                        break;
+                    case FIELD_TYPE_BOOL:
+                        fprintf(out_file, "    serialize_bool_field(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), leading_comma);
+                        break;
+                    case FIELD_TYPE_STRING:
+                        fprintf(out_file, "    serialize_string_field(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), leading_comma);
+                        break;
+                    case FIELD_TYPE_STRUCT:
+                        if (i > 0) {
+
+                            fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \",\\\"%.*s\\\":\");\n", MD_S8VArg(f->name));
+                        } else {
+                            fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \"\\\"%.*s\\\":\");\n", MD_S8VArg(f->name));
+                        }
+                        fprintf(out_file, "    serialize_json_%.*s(arena, &data->%.*s, buf, buf_size, index);\n", MD_S8VArg(f->struct_field_type_ref->string), MD_S8VArg(f->name));
+                        break;
+                }
             }
 
         }
@@ -156,6 +229,7 @@ void write_struct_serializer_to_file(Struct *s, FILE *out_file) {
 
     fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \"}\");\n");
     fprintf(out_file, "}\n");
+    fprintf(out_file, "GenerateOptionStructSerializeFunc(serialize_json_%.*s, %.*s);\n", MD_S8VArg(s->name), MD_S8VArg(s->name));
 }
 
 void write_struct_parser_to_file(Struct *s, FILE *out_file) {
@@ -202,16 +276,16 @@ void write_struct_parser_to_file(Struct *s, FILE *out_file) {
                         "                    errno = 0;\n"
                         "                    value = strtol(json + tokens[*index].start, 0, 10);\n"
                         "                    if (errno != 0 && value == 0) {\n"
-                        "                        fprintf(stderr, \"JSON parse error: Expected json type 'i32' for '%.*s'\\n\");\n"
+                        "                        fprintf(stderr, \"JSON parse error: errno!=0: Expected json type 'i32' for '%.*s', found object\\n\");\n"
                         "                        exit(1);\n"
                         "                    } else if (value == LONG_MIN || value == LONG_MAX) {\n"
-                        "                        fprintf(stderr, \"JSON parse error: Expected json type 'i32' for '%.*s'\\n\");\n"
+                        "                        fprintf(stderr, \"JSON parse error: value==MAX: Expected json type 'i32' for '%.*s', found object\\n\");\n"
                         "                        exit(1);\n"
                         "                    }\n\n"
                         "                    *index += 1;\n"
                         "                    new_struct.%.*s[i] = value;\n"
                         "                } else {\n"
-                        "                    fprintf(stderr, \"JSON parse error: Expected json type 'i32' for '%.*s'\\n\");\n"
+                        "                    fprintf(stderr, \"JSON parse error: Expected json type 'i32' for '%.*s', found object\\n\");\n"
                         "                    exit(1);\n"
                         "                }\n"
                     , MD_S8VArg(f->name), MD_S8VArg(f->name), MD_S8VArg(f->name), MD_S8VArg(f->name));
@@ -351,16 +425,24 @@ void write_struct_parser_to_file(Struct *s, FILE *out_file) {
                         "            errno = 0;\n"
                         "            value = strtol(json + tokens[*index].start, 0, 10);\n"
                         "            if (errno != 0 && value == 0) {\n"
-                        "                fprintf(stderr, \"JSON parse error: Expected json type 'i32'\\n\");\n"
+                        "                fprintf(stderr, \"JSON parse error: errno!=0: Expected json type 'i32'\\n\");\n"
                         "                exit(1);\n"
                         "            } else if (value == LONG_MIN || value == LONG_MAX) {\n"
-                        "                fprintf(stderr, \"JSON parse error: Expected json type 'i32'\\n\");\n"
+                        "                fprintf(stderr, \"JSON parse error: value==MAX: Expected json type 'i32'\\n\");\n"
                         "                exit(1);\n"
                         "            }\n\n"
                         "            *index += 1;\n"
-                        "            num_parsed_fields += 1;\n"
-                        "            new_struct.%.*s = value;\n"
-                        "        }\n", MD_S8VArg(f->name));
+                        "            num_parsed_fields += 1;\n");
+
+                    if (f->is_optional) {
+                        fprintf(out_file,
+                                "            new_struct.%.*s = Some(long, value);\n"
+                                "        }\n", MD_S8VArg(f->name));
+                    } else {
+                        fprintf(out_file,
+                                "            new_struct.%.*s = value;\n"
+                                "        }\n", MD_S8VArg(f->name));
+                    }
                     break;
                 case FIELD_TYPE_F32:
                     fprintf(out_file,
@@ -378,9 +460,17 @@ void write_struct_parser_to_file(Struct *s, FILE *out_file) {
                         "                exit(1);\n"
                         "            }\n\n"
                         "            *index += 1;\n"
-                        "            num_parsed_fields += 1;\n"
-                        "            new_struct.%.*s = value;\n"
-                        "        }\n", MD_S8VArg(f->name));
+                        "            num_parsed_fields += 1;\n");
+
+                    if (f->is_optional) {
+                        fprintf(out_file,
+                                "            new_struct.%.*s = Some(float, value);\n"
+                                "        }\n", MD_S8VArg(f->name));
+                    } else {
+                        fprintf(out_file,
+                                "            new_struct.%.*s = value;\n"
+                                "        }\n", MD_S8VArg(f->name));
+                    }
                     break;
                 case FIELD_TYPE_BOOL:
                     fprintf(out_file,
@@ -393,28 +483,56 @@ void write_struct_parser_to_file(Struct *s, FILE *out_file) {
                         "                exit(1);\n"
                         "            }\n\n"
                         "            *index += 1;\n"
-                        "            num_parsed_fields += 1;\n"
-                        "            new_struct.%.*s = text == 't';\n"
-                        "        }\n", MD_S8VArg(f->name));
+                        "            num_parsed_fields += 1;\n");
+
+                    if (f->is_optional) {
+                        fprintf(out_file,
+                                "            new_struct.%.*s = Some(_Bool, text == 't');\n"
+                                "        }\n", MD_S8VArg(f->name));
+                    } else {
+                        fprintf(out_file,
+                                "            new_struct.%.*s = text == 't';\n"
+                                "        }\n", MD_S8VArg(f->name));
+                    }
                     break;
                 case FIELD_TYPE_STRING:
                     fprintf(out_file,
                         "if (is_jsoneq(json, &tokens[*index], \"%.*s\", %llu) && tokens[*index+1].type == JSMN_STRING) {\n", MD_S8VArg(f->name), f->name.size);
                     fprintf(out_file,
                         "            *index += 1;\n"
-                        "            num_parsed_fields += 1;\n"
-                        "            new_struct.%.*s = (JsonString){ tokens[*index].end - tokens[*index].start, json+tokens[*index].start };\n"
+                        "            num_parsed_fields += 1;\n");
+
+                    if (f->is_optional) {
+                        fprintf(out_file,
+                                "            new_struct.%.*s = Some(JsonString, ((JsonString){ tokens[*index].end - tokens[*index].start, json+tokens[*index].start }));\n", MD_S8VArg(f->name));
+                    } else {
+                        fprintf(out_file,
+                                "            new_struct.%.*s = (JsonString){ tokens[*index].end - tokens[*index].start, json+tokens[*index].start };\n", MD_S8VArg(f->name));
+                    }
+
+                    fprintf(out_file, 
                         "            *index += 1;\n"
-                        "        }\n", MD_S8VArg(f->name));
+                        "        }\n");
                     break;
                 case FIELD_TYPE_STRUCT:
                     fprintf(out_file,
                         "if (is_jsoneq(json, &tokens[*index], \"%.*s\", %llu) && tokens[*index+1].type == JSMN_OBJECT) {\n", MD_S8VArg(f->name), f->name.size);
                     fprintf(out_file,
-                        "            *index += 1;\n"
-                        "            new_struct.%.*s = parse_json_%.*s(arena, json, tokens, index);\n"
-                        "            num_parsed_fields += 1;\n"
-                        "        }\n", MD_S8VArg(f->name), MD_S8VArg(f->struct_field_type_ref->string));
+                        "            *index += 1;\n");
+
+                    if (f->is_optional) {
+                        fprintf(out_file,
+                                "            new_struct.%.*s = Some(%.*s, parse_json_%.*s(arena, json, tokens, index));\n"
+                                , MD_S8VArg(f->name), MD_S8VArg(f->struct_field_type_ref->string), MD_S8VArg(f->struct_field_type_ref->string));
+                    } else {
+                        fprintf(out_file,
+                                "            new_struct.%.*s = parse_json_%.*s(arena, json, tokens, index);\n"
+                                , MD_S8VArg(f->name), MD_S8VArg(f->struct_field_type_ref->string));
+                    }
+
+                    fprintf(out_file,
+                            "            num_parsed_fields += 1;\n"
+                            "        }\n");
                     break;
             }
         }

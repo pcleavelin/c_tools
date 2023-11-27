@@ -1,12 +1,51 @@
-#ifndef __C_SERDE_HEADER__
-#define __C_SERDE_HEADER__
+#ifndef __C_BETTER_STRUCTS_HEADER__
+#define __C_BETTER_STRUCTS_HEADER__
 
+#include <stdbool.h>
 #include <arena/arena.h>
+
+typedef enum {
+    OPTION_NONE,
+    OPTION_SOME,
+} OptionValue;
+
+#define Option(T) struct T ## Option
+#define GenerateOptionType(T) Option(T){\
+    OptionValue option_value;\
+    T value;\
+};\
+Option(T) T ## None(){\
+    Option(T) this;\
+    this.option_value = OPTION_NONE;\
+    return this;\
+}\
+Option(T) T ## Some(T value){\
+    Option(T) this;\
+    this.option_value = OPTION_SOME;\
+    this.value = value;\
+    return this;\
+}
+#define Some(T, value) T ## Some(value)
+#define None(T) T ## None()
+#define is_some(value) value.option_value==OPTION_SOME
+#define is_none(value) value.option_value==OPTION_NONE
+#define match_option(T, value, some_block, none_block) \
+    if (is_some(value)) some_block \
+    else if (is_none(value)) none_block
 
 typedef struct JsonString {
     unsigned int length;
     const char *text;
 } JsonString;
+
+#define MakeString(string) ((JsonString) { strlen(string), string })
+
+GenerateOptionType(char);
+GenerateOptionType(int);
+GenerateOptionType(long);
+GenerateOptionType(_Bool);
+GenerateOptionType(float);
+GenerateOptionType(JsonString);
 
 JsonString escape_string(Arena *arena, JsonString string) {
     int num_escaped = 0;
@@ -52,6 +91,21 @@ JsonString escape_string(Arena *arena, JsonString string) {
     return escaped;
 }
 
+#define GenerateOptionSerializeFunc(func_name, type) \
+    void func_name ## _optional(Arena *arena, char *buf, const unsigned int buf_size, unsigned int *index, const char *field_name, const Option(type) value, const bool leading_comma) {\
+        if (is_some(value)) {\
+            func_name(arena, buf, buf_size, index, field_name, value.value, leading_comma);\
+        }\
+    }
+#define GenerateOptionStructSerializeFunc(func_name, type) \
+    void func_name ## _optional(Arena *arena, Option(type) *value, char *buf, const unsigned int buf_size, unsigned int *index) {\
+        if (is_some((*value))) {\
+            func_name(arena, &value->value, buf, buf_size, index);\
+        } else {\
+            *index += snprintf(buf + *index, buf_size - *index, "null");\
+        }\
+    }
+
 void serialize_integer_value(Arena *arena, char *buf, const unsigned int buf_size, unsigned int *index, const long value, const bool leading_comma) {
     *index += snprintf(buf + *index, buf_size - *index, "%s%ld", leading_comma ? "," : "", value);
 }
@@ -64,8 +118,8 @@ void serialize_bool_value(Arena *arena, char *buf, const unsigned int buf_size, 
     *index += snprintf(buf + *index, buf_size - *index, "%s%s", leading_comma ? "," : "", value ? "true" : "false");
 }
 
-void serialize_string_value(Arena *arena, char *buf, const unsigned int buf_size, unsigned int *index, const JsonString *value, const bool leading_comma) {
-    JsonString escaped_value = escape_string(arena, *value);
+void serialize_string_value(Arena *arena, char *buf, const unsigned int buf_size, unsigned int *index, const JsonString value, const bool leading_comma) {
+    JsonString escaped_value = escape_string(arena, value);
     *index += snprintf(buf + *index, buf_size - *index, "%s\"%.*s\"", leading_comma ? "," : "", escaped_value.length, escaped_value.text);
 }
 
@@ -73,21 +127,25 @@ void serialize_integer_field(Arena *arena, char *buf, const unsigned int buf_siz
     *index += snprintf(buf + *index, buf_size - *index, "%s\"%s\":", leading_comma ? "," : "", field_name);
     serialize_integer_value(arena, buf, buf_size, index, value, false);
 }
+GenerateOptionSerializeFunc(serialize_integer_field, long);
 
 void serialize_float_field(Arena *arena, char *buf, const unsigned int buf_size, unsigned int *index, const char *field_name, const float value, const bool leading_comma) {
     *index += snprintf(buf + *index, buf_size - *index, "%s\"%s\":", leading_comma ? "," : "", field_name);
     serialize_float_value(arena, buf, buf_size, index, value, false);
 }
+GenerateOptionSerializeFunc(serialize_float_field, float);
 
 void serialize_bool_field(Arena *arena, char *buf, const unsigned int buf_size, unsigned int *index, const char *field_name, const bool value, const bool leading_comma) {
     *index += snprintf(buf + *index, buf_size - *index, "%s\"%s\":", leading_comma ? "," : "", field_name);
     serialize_bool_value(arena, buf, buf_size, index, value, false);
 }
+GenerateOptionSerializeFunc(serialize_bool_field, bool);
 
-void serialize_string_field(Arena *arena, char *buf, const unsigned int buf_size, unsigned int *index, const char *field_name, const JsonString *value, const bool leading_comma) {
+void serialize_string_field(Arena *arena, char *buf, const unsigned int buf_size, unsigned int *index, const char *field_name, const JsonString value, const bool leading_comma) {
     *index += snprintf(buf + *index, buf_size - *index, "%s\"%s\":", leading_comma ? "," : "", field_name);
     serialize_string_value(arena, buf, buf_size, index, value, false);
 }
+GenerateOptionSerializeFunc(serialize_string_field, JsonString);
 
 bool is_jsoneq(const char *json, const jsmntok_t *token, const char *str, const unsigned int str_len) {
     const int token_size = token->end - token->start;

@@ -1,0 +1,106 @@
+// -------Client Side Requests-------
+@struct LspTextDocument: {
+    uri: string,
+}
+@struct LspDocumentSymbolsParams: {
+    textDocument: LspTextDocument,
+}
+@struct LspDocumentSymbolsRequest: {
+    id: i32,
+    jsonrpc: string,
+    method: string,
+    params: LspDocumentSymbolsParams,
+}
+
+@struct LspPosition: {
+    line: i32,
+    character: i32,
+}
+@struct LspRange: {
+    start: LspPosition,
+    end: LspPosition,
+}
+@struct LspLocation: {
+    uri: string,
+    range: LspRange,
+}
+@struct LspSymbolInformation: {
+	name: string;
+	kind: i32;
+	location: LspLocation;
+}
+
+@struct LspDocumentSymbolsResponse: {
+    result: @array(count) LspSymbolInformation;
+}
+
+@struct LspTextDocumentItem: {
+    uri: string,
+    languageId: string,
+    version: i32,
+    text: string,
+}
+@struct LspDidOpenTextDocumentParams: {
+    textDocument: LspTextDocumentItem,
+}
+@struct LspDidOpenTextDocumentNotification: {
+    jsonrpc: string,
+    method: string,
+    params: LspDidOpenTextDocumentParams,
+}
+
+@struct LspClientCapabilitiesWorkspace: {
+
+}
+@struct LspClientCapabilities: {
+    workspace: @option LspClientCapabilitiesWorkspace,
+}
+
+@struct LspInitializeRequestParams: {
+    capabilities: LspClientCapabilities,
+    rootUri: @option string,
+    processId: i32,
+}
+
+@struct LspInitializedNotification: {
+    jsonrpc: string,
+    method: string,
+}
+@struct LspInitializeRequest: {
+    id: i32,
+    jsonrpc: string,
+    method: string,
+    params: LspInitializeRequestParams,
+}
+
+@struct LspShutdownRequest: {
+    id: i32,
+    jsonrpc: string,
+    method: string,
+}
+
+@struct LspExitNotification: {
+    jsonrpc: string,
+    method: string,
+}
+// ----------------------------------
+
+// -------Server Side Requests-------
+@struct LspServerInfo: {
+    name: string,
+    version: string,
+}
+
+@struct LspCapabilities: {
+}
+@struct LspInitializeResult: {
+    capabilities: LspCapabilities,
+    serverInfo: LspServerInfo,
+}
+
+@struct LspInitializeResponse: {
+    id: i32,
+    jsonrpc: string,
+    result: LspInitializeResult,
+}
+// ----------------------------------
