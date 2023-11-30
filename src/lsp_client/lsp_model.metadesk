@@ -5,13 +5,6 @@
 @struct LspDocumentSymbolsParams: {
     textDocument: LspTextDocument,
 }
-@struct LspDocumentSymbolsRequest: {
-    id: i32,
-    jsonrpc: string,
-    method: string,
-    params: LspDocumentSymbolsParams,
-}
-
 @struct LspPosition: {
     line: i32,
     character: i32,
@@ -43,11 +36,6 @@
 @struct LspDidOpenTextDocumentParams: {
     textDocument: LspTextDocumentItem,
 }
-@struct LspDidOpenTextDocumentNotification: {
-    jsonrpc: string,
-    method: string,
-    params: LspDidOpenTextDocumentParams,
-}
 
 @struct LspClientCapabilitiesWorkspace: {
 
@@ -62,26 +50,46 @@
     processId: i32,
 }
 
-@struct LspInitializedNotification: {
-    jsonrpc: string,
-    method: string,
-}
-@struct LspInitializeRequest: {
-    id: i32,
-    jsonrpc: string,
-    method: string,
-    params: LspInitializeRequestParams,
+@enum("method") LspRequestMethod: {
+    @jsonRename("initialize")
+    Initialize: LspInitializeRequestParams,
+
+    @jsonRename("initialized")
+    Initialized,
+
+    @jsonRename("shutdown")
+    Shutdown,
+
+    @jsonRename("exit")
+    Exit,
+
+    @jsonRename("textDocument/didOpen")
+    OpenFile: LspDidOpenTextDocumentParams,
+
+    @jsonRename("textDocument/documentSymbol")
+    GetDocumentSymbols: LspDocumentSymbolsParams,
 }
 
-@struct LspShutdownRequest: {
-    id: i32,
-    jsonrpc: string,
-    method: string,
+@enum("method") LspNotificationMethod: {
+    @jsonRename("initialized")
+    Initialized,
+
+    @jsonRename("exit")
+    Exit,
+
+    @jsonRename("textDocument/didOpen")
+    OpenFile: LspDidOpenTextDocumentParams,
 }
 
-@struct LspExitNotification: {
+@struct LspRequest: {
+    id: i32,
     jsonrpc: string,
-    method: string,
+    params: LspRequestMethod,
+}
+
+@struct LspNotification: {
+    jsonrpc: string,
+    params: LspNotificationMethod,
 }
 // ----------------------------------
 

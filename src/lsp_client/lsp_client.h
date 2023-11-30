@@ -64,26 +64,30 @@ void lsp_send_initialize_message(Arena *arena, Option(JsonString) root_directory
         root_directory.value.text = root_uri;
     }
 
-    LspInitializeRequest req = (LspInitializeRequest) {
+    LspRequest req = (LspRequest) {
         1,
         (JsonString) { 3, "2.0" },
-        (JsonString) { 10, "initialize" },
-        (LspInitializeRequestParams) {
-            (LspClientCapabilities) {
-                None(LspClientCapabilitiesWorkspace)
+        (LspRequestMethod) {
+            LspRequestMethod_Initialize,
+            (LspInitializeRequestParams) {
+                (LspClientCapabilities) {
+                    None(LspClientCapabilitiesWorkspace)
+                },
+                root_directory,
+                pid,
             },
-            root_directory,
-            pid,
-        },
+        }
     };
-    lsp_send_client_message(arena, pipe, LspInitializeRequest, &req);
+    lsp_send_client_message(arena, pipe, LspRequest, &req);
 }
 void lsp_send_initialize_notification(Arena *arena, int *pipe) {
-    LspInitializedNotification req = (LspInitializedNotification) {
+    LspNotification req = (LspNotification) {
         (JsonString) { 3, "2.0" },
-        (JsonString) { 11, "initialized" },
+        (LspNotificationMethod) {
+            LspNotificationMethod_Initialized,
+        }
     };
-    lsp_send_client_message(arena, pipe, LspInitializedNotification, &req);
+    lsp_send_client_message(arena, pipe, LspNotification, &req);
 }
 
 Option(LspInitializeResponse) lsp_initialize(Arena *arena, int *to_client_pipe, int *to_server_pipe, Option(JsonString) root_uri, jsmntok_t *tokens, int max_tokens) {
@@ -104,18 +108,22 @@ Option(LspInitializeResponse) lsp_initialize(Arena *arena, int *to_client_pipe, 
 }
 
 void lsp_shutdown(Arena *arena, int *pipe) {
-    LspShutdownRequest shutdown_request = (LspShutdownRequest) {
-        2,
+    LspRequest req = (LspRequest) {
+        1,
         (JsonString) { 3, "2.0" },
-        (JsonString) { 8, "shutdown" },
+        (LspRequestMethod) {
+            LspRequestMethod_Shutdown,
+        }
     };
-    lsp_send_client_message(arena, pipe, LspShutdownRequest, &shutdown_request);
+    lsp_send_client_message(arena, pipe, LspRequest, &req);
 
-    LspExitNotification exit_notification = (LspExitNotification) {
+    LspNotification exit_notification = (LspNotification) {
         (JsonString) { 3, "2.0" },
-        (JsonString) { 4, "exit" },
+        (LspNotificationMethod) {
+            LspNotificationMethod_Exit,
+        }
     };
-    lsp_send_client_message(arena, pipe, LspExitNotification, &exit_notification);
+    lsp_send_client_message(arena, pipe, LspNotification, &exit_notification);
 }
 
 void lsp_open_file(Arena *arena, int *to_client_pipe, const char *file_path, JsonString language_type) {
@@ -128,19 +136,21 @@ void lsp_open_file(Arena *arena, int *to_client_pipe, const char *file_path, Jso
     char *file_uri = arena_allocate_block(arena, sizeof(char) * file_uri_length);
     sprintf(file_uri, "file://%s", file_path);
 
-    LspDidOpenTextDocumentNotification req = (LspDidOpenTextDocumentNotification) {
+    LspNotification req = (LspNotification) {
         (JsonString) { 3, "2.0" },
-        (JsonString) { 20, "textDocument/didOpen" },
-        (LspDidOpenTextDocumentParams) {
-            (LspTextDocumentItem){
-                (JsonString) { file_uri_length, file_uri },
-                language_type,
-                0,
-                file_contents
+        (LspNotificationMethod) {
+            .type = LspNotificationMethod_OpenFile,
+            .OpenFile = (LspDidOpenTextDocumentParams) {
+                (LspTextDocumentItem){
+                    (JsonString) { file_uri_length, file_uri },
+                    language_type,
+                    0,
+                    file_contents
+                },
             },
-        },
+        }
     };
-    lsp_send_client_message(arena, to_client_pipe, LspDidOpenTextDocumentNotification, &req);
+    lsp_send_client_message(arena, to_client_pipe, LspNotification, &req);
 }
 
 Option(LspDocumentSymbolsResponse) lsp_get_document_symbols(Arena *arena, int *to_client_pipe, int *to_server_pipe, JsonString file_path, jsmntok_t *tokens, int max_tokens) {
@@ -151,17 +161,19 @@ Option(LspDocumentSymbolsResponse) lsp_get_document_symbols(Arena *arena, int *t
     file_path.length = file_uri_length;
     file_path.text = file_uri;
 
-    LspDocumentSymbolsRequest req = (LspDocumentSymbolsRequest) {
+    LspRequest req = (LspRequest) {
         1,
         (JsonString) { 3, "2.0" },
-        MakeString("textDocument/documentSymbol"),
-        (LspDocumentSymbolsParams) {
-            (LspTextDocument){
-                file_path
-            },
-        },
+        (LspRequestMethod) {
+            .type = LspRequestMethod_GetDocumentSymbols,
+            .GetDocumentSymbols = (LspDocumentSymbolsParams) {
+                (LspTextDocument){
+                    file_path
+                },
+            }
+        }
     };
-    lsp_send_client_message(arena, to_client_pipe, LspDocumentSymbolsRequest, &req);
+    lsp_send_client_message(arena, to_client_pipe, LspRequest, &req);
 
     ReadResult result = lsp_read_from_server(arena, to_server_pipe, tokens, max_tokens);
     result = lsp_read_from_server(arena, to_server_pipe, tokens, max_tokens);

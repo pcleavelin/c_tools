@@ -5,7 +5,7 @@
 #include <limits.h>
 #include <math.h>
 #include <jsmn.h>
-#include <better_structs/better_structs.h>
+#include <better_structs/json.h>
 
 static void json_skip_object(const char *json, const jsmntok_t *tokens, unsigned int *index, bool is_array) {
     const int num_children = tokens[*index].size;
@@ -101,78 +101,6 @@ void serialize_json_LspDocumentSymbolsParams(Arena *arena, LspDocumentSymbolsPar
     *index += snprintf(buf + *index, buf_size - *index, "}");
 }
 GenerateOptionStructSerializeFunc(serialize_json_LspDocumentSymbolsParams, LspDocumentSymbolsParams);
-
-typedef struct LspDocumentSymbolsRequest {
-    long id;
-    JsonString jsonrpc;
-    JsonString method;
-    LspDocumentSymbolsParams params;
-} LspDocumentSymbolsRequest;
-GenerateOptionType(LspDocumentSymbolsRequest);
-LspDocumentSymbolsRequest parse_json_LspDocumentSymbolsRequest(Arena *arena, const char *json, const jsmntok_t *tokens, unsigned int *index) {
-    LspDocumentSymbolsRequest new_struct = {};
-    int num_children = tokens[*index].size;
-    *index += 1;
-    long num_parsed_fields = 0;
-    for(int i=0;i<num_children;i++) {
-        if (is_jsoneq(json, &tokens[*index], "id", 2) && tokens[*index+1].type == JSMN_PRIMITIVE) {
-            *index += 1;
-            long value = 0;
-            errno = 0;
-            value = strtol(json + tokens[*index].start, 0, 10);
-            if (errno != 0 && value == 0) {
-                fprintf(stderr, "JSON parse error: errno!=0: Expected json type 'i32'\n");
-                exit(1);
-            } else if (value == LONG_MIN || value == LONG_MAX) {
-                fprintf(stderr, "JSON parse error: value==MAX: Expected json type 'i32'\n");
-                exit(1);
-            }
-
-            *index += 1;
-            num_parsed_fields += 1;
-            new_struct.id = value;
-        }
-        else if (is_jsoneq(json, &tokens[*index], "jsonrpc", 7) && tokens[*index+1].type == JSMN_STRING) {
-            *index += 1;
-            num_parsed_fields += 1;
-            new_struct.jsonrpc = (JsonString){ tokens[*index].end - tokens[*index].start, json+tokens[*index].start };
-            *index += 1;
-        }
-        else if (is_jsoneq(json, &tokens[*index], "method", 6) && tokens[*index+1].type == JSMN_STRING) {
-            *index += 1;
-            num_parsed_fields += 1;
-            new_struct.method = (JsonString){ tokens[*index].end - tokens[*index].start, json+tokens[*index].start };
-            *index += 1;
-        }
-        else if (is_jsoneq(json, &tokens[*index], "params", 6) && tokens[*index+1].type == JSMN_OBJECT) {
-            *index += 1;
-            new_struct.params = parse_json_LspDocumentSymbolsParams(arena, json, tokens, index);
-            num_parsed_fields += 1;
-        }
-        else if (tokens[*index+1].type == JSMN_OBJECT || tokens[*index+1].type == JSMN_ARRAY) {
-            *index += 1;
-            json_skip_object(json, tokens, index, tokens[*index].type == JSMN_ARRAY);
-        } else {
-            *index += 2;
-        }
-    }
-
-    if (num_parsed_fields != 4) {
-        fprintf(stderr, "JSON parse error: Expected 4 fields, got %ld\n", num_parsed_fields);
-    }
-
-    return new_struct;
-}
-void serialize_json_LspDocumentSymbolsRequest(Arena *arena, LspDocumentSymbolsRequest *data, char *buf, const unsigned int buf_size, unsigned int *index) {
-    *index += snprintf(buf + *index, buf_size - *index, "{");
-    serialize_integer_field(arena, buf, buf_size, index, "id", data->id, false);
-    serialize_string_field(arena, buf, buf_size, index, "jsonrpc", data->jsonrpc, true);
-    serialize_string_field(arena, buf, buf_size, index, "method", data->method, true);
-    *index += snprintf(buf + *index, buf_size - *index, ",\"params\":");
-    serialize_json_LspDocumentSymbolsParams(arena, &data->params, buf, buf_size, index);
-    *index += snprintf(buf + *index, buf_size - *index, "}");
-}
-GenerateOptionStructSerializeFunc(serialize_json_LspDocumentSymbolsRequest, LspDocumentSymbolsRequest);
 
 typedef struct LspPosition {
     long line;
@@ -555,59 +483,6 @@ void serialize_json_LspDidOpenTextDocumentParams(Arena *arena, LspDidOpenTextDoc
 }
 GenerateOptionStructSerializeFunc(serialize_json_LspDidOpenTextDocumentParams, LspDidOpenTextDocumentParams);
 
-typedef struct LspDidOpenTextDocumentNotification {
-    JsonString jsonrpc;
-    JsonString method;
-    LspDidOpenTextDocumentParams params;
-} LspDidOpenTextDocumentNotification;
-GenerateOptionType(LspDidOpenTextDocumentNotification);
-LspDidOpenTextDocumentNotification parse_json_LspDidOpenTextDocumentNotification(Arena *arena, const char *json, const jsmntok_t *tokens, unsigned int *index) {
-    LspDidOpenTextDocumentNotification new_struct = {};
-    int num_children = tokens[*index].size;
-    *index += 1;
-    long num_parsed_fields = 0;
-    for(int i=0;i<num_children;i++) {
-        if (is_jsoneq(json, &tokens[*index], "jsonrpc", 7) && tokens[*index+1].type == JSMN_STRING) {
-            *index += 1;
-            num_parsed_fields += 1;
-            new_struct.jsonrpc = (JsonString){ tokens[*index].end - tokens[*index].start, json+tokens[*index].start };
-            *index += 1;
-        }
-        else if (is_jsoneq(json, &tokens[*index], "method", 6) && tokens[*index+1].type == JSMN_STRING) {
-            *index += 1;
-            num_parsed_fields += 1;
-            new_struct.method = (JsonString){ tokens[*index].end - tokens[*index].start, json+tokens[*index].start };
-            *index += 1;
-        }
-        else if (is_jsoneq(json, &tokens[*index], "params", 6) && tokens[*index+1].type == JSMN_OBJECT) {
-            *index += 1;
-            new_struct.params = parse_json_LspDidOpenTextDocumentParams(arena, json, tokens, index);
-            num_parsed_fields += 1;
-        }
-        else if (tokens[*index+1].type == JSMN_OBJECT || tokens[*index+1].type == JSMN_ARRAY) {
-            *index += 1;
-            json_skip_object(json, tokens, index, tokens[*index].type == JSMN_ARRAY);
-        } else {
-            *index += 2;
-        }
-    }
-
-    if (num_parsed_fields != 3) {
-        fprintf(stderr, "JSON parse error: Expected 3 fields, got %ld\n", num_parsed_fields);
-    }
-
-    return new_struct;
-}
-void serialize_json_LspDidOpenTextDocumentNotification(Arena *arena, LspDidOpenTextDocumentNotification *data, char *buf, const unsigned int buf_size, unsigned int *index) {
-    *index += snprintf(buf + *index, buf_size - *index, "{");
-    serialize_string_field(arena, buf, buf_size, index, "jsonrpc", data->jsonrpc, false);
-    serialize_string_field(arena, buf, buf_size, index, "method", data->method, true);
-    *index += snprintf(buf + *index, buf_size - *index, ",\"params\":");
-    serialize_json_LspDidOpenTextDocumentParams(arena, &data->params, buf, buf_size, index);
-    *index += snprintf(buf + *index, buf_size - *index, "}");
-}
-GenerateOptionStructSerializeFunc(serialize_json_LspDidOpenTextDocumentNotification, LspDidOpenTextDocumentNotification);
-
 typedef struct LspClientCapabilitiesWorkspace {
 } LspClientCapabilitiesWorkspace;
 GenerateOptionType(LspClientCapabilitiesWorkspace);
@@ -738,60 +613,93 @@ void serialize_json_LspInitializeRequestParams(Arena *arena, LspInitializeReques
 }
 GenerateOptionStructSerializeFunc(serialize_json_LspInitializeRequestParams, LspInitializeRequestParams);
 
-typedef struct LspInitializedNotification {
-    JsonString jsonrpc;
-    JsonString method;
-} LspInitializedNotification;
-GenerateOptionType(LspInitializedNotification);
-LspInitializedNotification parse_json_LspInitializedNotification(Arena *arena, const char *json, const jsmntok_t *tokens, unsigned int *index) {
-    LspInitializedNotification new_struct = {};
-    int num_children = tokens[*index].size;
-    *index += 1;
-    long num_parsed_fields = 0;
-    for(int i=0;i<num_children;i++) {
-        if (is_jsoneq(json, &tokens[*index], "jsonrpc", 7) && tokens[*index+1].type == JSMN_STRING) {
-            *index += 1;
-            num_parsed_fields += 1;
-            new_struct.jsonrpc = (JsonString){ tokens[*index].end - tokens[*index].start, json+tokens[*index].start };
-            *index += 1;
-        }
-        else if (is_jsoneq(json, &tokens[*index], "method", 6) && tokens[*index+1].type == JSMN_STRING) {
-            *index += 1;
-            num_parsed_fields += 1;
-            new_struct.method = (JsonString){ tokens[*index].end - tokens[*index].start, json+tokens[*index].start };
-            *index += 1;
-        }
-        else if (tokens[*index+1].type == JSMN_OBJECT || tokens[*index+1].type == JSMN_ARRAY) {
-            *index += 1;
-            json_skip_object(json, tokens, index, tokens[*index].type == JSMN_ARRAY);
-        } else {
-            *index += 2;
-        }
+typedef enum LspRequestMethodVariant {
+    LspRequestMethod_Initialize,
+    LspRequestMethod_Initialized,
+    LspRequestMethod_Shutdown,
+    LspRequestMethod_Exit,
+    LspRequestMethod_OpenFile,
+    LspRequestMethod_GetDocumentSymbols,
+} LspRequestMethodVariant;
+typedef struct LspRequestMethod {
+    LspRequestMethodVariant type;
+    union {
+    LspInitializeRequestParams Initialize;
+    LspDidOpenTextDocumentParams OpenFile;
+    LspDocumentSymbolsParams GetDocumentSymbols;
+    };
+} LspRequestMethod;
+GenerateOptionType(LspRequestMethod);
+LspRequestMethod parse_json_LspRequestMethod(Arena *arena, const char *json, const jsmntok_t *tokens, unsigned int *index) {}
+void serialize_json_LspRequestMethod(Arena *arena, LspRequestMethod *data, char *buf, const unsigned int buf_size, unsigned int *index) {
+    switch (data->type) {
+        case LspRequestMethod_Initialize:
+    serialize_json_LspInitializeRequestParams(arena, &data->Initialize, buf, buf_size, index);
+            *index += snprintf(buf + *index, buf_size - *index, ",\"method\": \"initialize\"");
+    break;
+        case LspRequestMethod_Initialized:
+            *index += snprintf(buf + *index, buf_size - *index, "null");
+            *index += snprintf(buf + *index, buf_size - *index, ",\"method\": \"initialized\"");
+    break;
+        case LspRequestMethod_Shutdown:
+            *index += snprintf(buf + *index, buf_size - *index, "null");
+            *index += snprintf(buf + *index, buf_size - *index, ",\"method\": \"shutdown\"");
+    break;
+        case LspRequestMethod_Exit:
+            *index += snprintf(buf + *index, buf_size - *index, "null");
+            *index += snprintf(buf + *index, buf_size - *index, ",\"method\": \"exit\"");
+    break;
+        case LspRequestMethod_OpenFile:
+    serialize_json_LspDidOpenTextDocumentParams(arena, &data->OpenFile, buf, buf_size, index);
+            *index += snprintf(buf + *index, buf_size - *index, ",\"method\": \"textDocument/didOpen\"");
+    break;
+        case LspRequestMethod_GetDocumentSymbols:
+    serialize_json_LspDocumentSymbolsParams(arena, &data->GetDocumentSymbols, buf, buf_size, index);
+            *index += snprintf(buf + *index, buf_size - *index, ",\"method\": \"textDocument/documentSymbol\"");
+    break;
     }
+}
+GenerateOptionStructSerializeFunc(serialize_json_LspRequestMethod, LspRequestMethod);
 
-    if (num_parsed_fields != 2) {
-        fprintf(stderr, "JSON parse error: Expected 2 fields, got %ld\n", num_parsed_fields);
+typedef enum LspNotificationMethodVariant {
+    LspNotificationMethod_Initialized,
+    LspNotificationMethod_Exit,
+    LspNotificationMethod_OpenFile,
+} LspNotificationMethodVariant;
+typedef struct LspNotificationMethod {
+    LspNotificationMethodVariant type;
+    union {
+    LspDidOpenTextDocumentParams OpenFile;
+    };
+} LspNotificationMethod;
+GenerateOptionType(LspNotificationMethod);
+LspNotificationMethod parse_json_LspNotificationMethod(Arena *arena, const char *json, const jsmntok_t *tokens, unsigned int *index) {}
+void serialize_json_LspNotificationMethod(Arena *arena, LspNotificationMethod *data, char *buf, const unsigned int buf_size, unsigned int *index) {
+    switch (data->type) {
+        case LspNotificationMethod_Initialized:
+            *index += snprintf(buf + *index, buf_size - *index, "null");
+            *index += snprintf(buf + *index, buf_size - *index, ",\"method\": \"initialized\"");
+    break;
+        case LspNotificationMethod_Exit:
+            *index += snprintf(buf + *index, buf_size - *index, "null");
+            *index += snprintf(buf + *index, buf_size - *index, ",\"method\": \"exit\"");
+    break;
+        case LspNotificationMethod_OpenFile:
+    serialize_json_LspDidOpenTextDocumentParams(arena, &data->OpenFile, buf, buf_size, index);
+            *index += snprintf(buf + *index, buf_size - *index, ",\"method\": \"textDocument/didOpen\"");
+    break;
     }
-
-    return new_struct;
 }
-void serialize_json_LspInitializedNotification(Arena *arena, LspInitializedNotification *data, char *buf, const unsigned int buf_size, unsigned int *index) {
-    *index += snprintf(buf + *index, buf_size - *index, "{");
-    serialize_string_field(arena, buf, buf_size, index, "jsonrpc", data->jsonrpc, false);
-    serialize_string_field(arena, buf, buf_size, index, "method", data->method, true);
-    *index += snprintf(buf + *index, buf_size - *index, "}");
-}
-GenerateOptionStructSerializeFunc(serialize_json_LspInitializedNotification, LspInitializedNotification);
+GenerateOptionStructSerializeFunc(serialize_json_LspNotificationMethod, LspNotificationMethod);
 
-typedef struct LspInitializeRequest {
+typedef struct LspRequest {
     long id;
     JsonString jsonrpc;
-    JsonString method;
-    LspInitializeRequestParams params;
-} LspInitializeRequest;
-GenerateOptionType(LspInitializeRequest);
-LspInitializeRequest parse_json_LspInitializeRequest(Arena *arena, const char *json, const jsmntok_t *tokens, unsigned int *index) {
-    LspInitializeRequest new_struct = {};
+    LspRequestMethod params;
+} LspRequest;
+GenerateOptionType(LspRequest);
+LspRequest parse_json_LspRequest(Arena *arena, const char *json, const jsmntok_t *tokens, unsigned int *index) {
+    LspRequest new_struct = {};
     int num_children = tokens[*index].size;
     *index += 1;
     long num_parsed_fields = 0;
@@ -817,84 +725,12 @@ LspInitializeRequest parse_json_LspInitializeRequest(Arena *arena, const char *j
             *index += 1;
             num_parsed_fields += 1;
             new_struct.jsonrpc = (JsonString){ tokens[*index].end - tokens[*index].start, json+tokens[*index].start };
-            *index += 1;
-        }
-        else if (is_jsoneq(json, &tokens[*index], "method", 6) && tokens[*index+1].type == JSMN_STRING) {
-            *index += 1;
-            num_parsed_fields += 1;
-            new_struct.method = (JsonString){ tokens[*index].end - tokens[*index].start, json+tokens[*index].start };
             *index += 1;
         }
         else if (is_jsoneq(json, &tokens[*index], "params", 6) && tokens[*index+1].type == JSMN_OBJECT) {
             *index += 1;
-            new_struct.params = parse_json_LspInitializeRequestParams(arena, json, tokens, index);
+            new_struct.params = parse_json_LspRequestMethod(arena, json, tokens, index);
             num_parsed_fields += 1;
-        }
-        else if (tokens[*index+1].type == JSMN_OBJECT || tokens[*index+1].type == JSMN_ARRAY) {
-            *index += 1;
-            json_skip_object(json, tokens, index, tokens[*index].type == JSMN_ARRAY);
-        } else {
-            *index += 2;
-        }
-    }
-
-    if (num_parsed_fields != 4) {
-        fprintf(stderr, "JSON parse error: Expected 4 fields, got %ld\n", num_parsed_fields);
-    }
-
-    return new_struct;
-}
-void serialize_json_LspInitializeRequest(Arena *arena, LspInitializeRequest *data, char *buf, const unsigned int buf_size, unsigned int *index) {
-    *index += snprintf(buf + *index, buf_size - *index, "{");
-    serialize_integer_field(arena, buf, buf_size, index, "id", data->id, false);
-    serialize_string_field(arena, buf, buf_size, index, "jsonrpc", data->jsonrpc, true);
-    serialize_string_field(arena, buf, buf_size, index, "method", data->method, true);
-    *index += snprintf(buf + *index, buf_size - *index, ",\"params\":");
-    serialize_json_LspInitializeRequestParams(arena, &data->params, buf, buf_size, index);
-    *index += snprintf(buf + *index, buf_size - *index, "}");
-}
-GenerateOptionStructSerializeFunc(serialize_json_LspInitializeRequest, LspInitializeRequest);
-
-typedef struct LspShutdownRequest {
-    long id;
-    JsonString jsonrpc;
-    JsonString method;
-} LspShutdownRequest;
-GenerateOptionType(LspShutdownRequest);
-LspShutdownRequest parse_json_LspShutdownRequest(Arena *arena, const char *json, const jsmntok_t *tokens, unsigned int *index) {
-    LspShutdownRequest new_struct = {};
-    int num_children = tokens[*index].size;
-    *index += 1;
-    long num_parsed_fields = 0;
-    for(int i=0;i<num_children;i++) {
-        if (is_jsoneq(json, &tokens[*index], "id", 2) && tokens[*index+1].type == JSMN_PRIMITIVE) {
-            *index += 1;
-            long value = 0;
-            errno = 0;
-            value = strtol(json + tokens[*index].start, 0, 10);
-            if (errno != 0 && value == 0) {
-                fprintf(stderr, "JSON parse error: errno!=0: Expected json type 'i32'\n");
-                exit(1);
-            } else if (value == LONG_MIN || value == LONG_MAX) {
-                fprintf(stderr, "JSON parse error: value==MAX: Expected json type 'i32'\n");
-                exit(1);
-            }
-
-            *index += 1;
-            num_parsed_fields += 1;
-            new_struct.id = value;
-        }
-        else if (is_jsoneq(json, &tokens[*index], "jsonrpc", 7) && tokens[*index+1].type == JSMN_STRING) {
-            *index += 1;
-            num_parsed_fields += 1;
-            new_struct.jsonrpc = (JsonString){ tokens[*index].end - tokens[*index].start, json+tokens[*index].start };
-            *index += 1;
-        }
-        else if (is_jsoneq(json, &tokens[*index], "method", 6) && tokens[*index+1].type == JSMN_STRING) {
-            *index += 1;
-            num_parsed_fields += 1;
-            new_struct.method = (JsonString){ tokens[*index].end - tokens[*index].start, json+tokens[*index].start };
-            *index += 1;
         }
         else if (tokens[*index+1].type == JSMN_OBJECT || tokens[*index+1].type == JSMN_ARRAY) {
             *index += 1;
@@ -910,22 +746,23 @@ LspShutdownRequest parse_json_LspShutdownRequest(Arena *arena, const char *json,
 
     return new_struct;
 }
-void serialize_json_LspShutdownRequest(Arena *arena, LspShutdownRequest *data, char *buf, const unsigned int buf_size, unsigned int *index) {
+void serialize_json_LspRequest(Arena *arena, LspRequest *data, char *buf, const unsigned int buf_size, unsigned int *index) {
     *index += snprintf(buf + *index, buf_size - *index, "{");
     serialize_integer_field(arena, buf, buf_size, index, "id", data->id, false);
     serialize_string_field(arena, buf, buf_size, index, "jsonrpc", data->jsonrpc, true);
-    serialize_string_field(arena, buf, buf_size, index, "method", data->method, true);
+    *index += snprintf(buf + *index, buf_size - *index, ",\"params\":");
+    serialize_json_LspRequestMethod(arena, &data->params, buf, buf_size, index);
     *index += snprintf(buf + *index, buf_size - *index, "}");
 }
-GenerateOptionStructSerializeFunc(serialize_json_LspShutdownRequest, LspShutdownRequest);
+GenerateOptionStructSerializeFunc(serialize_json_LspRequest, LspRequest);
 
-typedef struct LspExitNotification {
+typedef struct LspNotification {
     JsonString jsonrpc;
-    JsonString method;
-} LspExitNotification;
-GenerateOptionType(LspExitNotification);
-LspExitNotification parse_json_LspExitNotification(Arena *arena, const char *json, const jsmntok_t *tokens, unsigned int *index) {
-    LspExitNotification new_struct = {};
+    LspNotificationMethod params;
+} LspNotification;
+GenerateOptionType(LspNotification);
+LspNotification parse_json_LspNotification(Arena *arena, const char *json, const jsmntok_t *tokens, unsigned int *index) {
+    LspNotification new_struct = {};
     int num_children = tokens[*index].size;
     *index += 1;
     long num_parsed_fields = 0;
@@ -936,11 +773,10 @@ LspExitNotification parse_json_LspExitNotification(Arena *arena, const char *jso
             new_struct.jsonrpc = (JsonString){ tokens[*index].end - tokens[*index].start, json+tokens[*index].start };
             *index += 1;
         }
-        else if (is_jsoneq(json, &tokens[*index], "method", 6) && tokens[*index+1].type == JSMN_STRING) {
+        else if (is_jsoneq(json, &tokens[*index], "params", 6) && tokens[*index+1].type == JSMN_OBJECT) {
             *index += 1;
+            new_struct.params = parse_json_LspNotificationMethod(arena, json, tokens, index);
             num_parsed_fields += 1;
-            new_struct.method = (JsonString){ tokens[*index].end - tokens[*index].start, json+tokens[*index].start };
-            *index += 1;
         }
         else if (tokens[*index+1].type == JSMN_OBJECT || tokens[*index+1].type == JSMN_ARRAY) {
             *index += 1;
@@ -956,13 +792,14 @@ LspExitNotification parse_json_LspExitNotification(Arena *arena, const char *jso
 
     return new_struct;
 }
-void serialize_json_LspExitNotification(Arena *arena, LspExitNotification *data, char *buf, const unsigned int buf_size, unsigned int *index) {
+void serialize_json_LspNotification(Arena *arena, LspNotification *data, char *buf, const unsigned int buf_size, unsigned int *index) {
     *index += snprintf(buf + *index, buf_size - *index, "{");
     serialize_string_field(arena, buf, buf_size, index, "jsonrpc", data->jsonrpc, false);
-    serialize_string_field(arena, buf, buf_size, index, "method", data->method, true);
+    *index += snprintf(buf + *index, buf_size - *index, ",\"params\":");
+    serialize_json_LspNotificationMethod(arena, &data->params, buf, buf_size, index);
     *index += snprintf(buf + *index, buf_size - *index, "}");
 }
-GenerateOptionStructSerializeFunc(serialize_json_LspExitNotification, LspExitNotification);
+GenerateOptionStructSerializeFunc(serialize_json_LspNotification, LspNotification);
 
 typedef struct LspServerInfo {
     JsonString name;

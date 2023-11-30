@@ -1,6 +1,10 @@
+#include <assert.h>
 #include <stdbool.h>
 #include <md.h>
 #include <md.c>
+#include "better_structs.h"
+
+GenerateOptionType(MD_String8);
 
 static MD_Arena *arena = 0;
 
@@ -11,15 +15,17 @@ typedef enum FieldType {
     FIELD_TYPE_STRING,
     FIELD_TYPE_STRUCT,
 } FieldType;
+GenerateOptionType(FieldType);
 
 typedef struct Field {
     bool is_array;
     MD_String8 array_count_name;
 
     bool is_optional;
-    FieldType type;
+    Option(FieldType) type;
 
     MD_Node *struct_field_type_ref;
+    MD_String8 json_name;
     MD_String8 name;
 } Field;
 
@@ -29,108 +35,260 @@ typedef struct Struct {
     Field *fields;
 } Struct;
 
+typedef struct Enum {
+    MD_String8 name;
+    Option(MD_String8) tag_name;
+    unsigned int variant_count;
+    Field *variants;
+} Enum;
+
+void write_field_to_file(Field *f, FILE *out_file) {
+    if (f->is_array && f->is_optional) {
+        fprintf(out_file, "    long %.*s;\n", MD_S8VArg(f->array_count_name));
+        switch (f->type.value) {
+            case FIELD_TYPE_I32:
+                fprintf(out_file, "    Option(long *)");
+                break;
+            case FIELD_TYPE_F32:
+                fprintf(out_file, "    Option(float *)");
+                break;
+            case FIELD_TYPE_BOOL:
+                fprintf(out_file, "    Option(_Bool *)");
+                break;
+            case FIELD_TYPE_STRING:
+                fprintf(out_file, "    Option(JsonString *)");
+                break;
+            case FIELD_TYPE_STRUCT:
+                fprintf(out_file, "    Option(%.*s *)", MD_S8VArg(f->struct_field_type_ref->string));
+                break;
+        }
+    } else if (f->is_optional) {
+        switch (f->type.value) {
+            case FIELD_TYPE_I32:
+                fprintf(out_file, "    Option(long)");
+                break;
+            case FIELD_TYPE_F32:
+                fprintf(out_file, "    Option(float)");
+                break;
+            case FIELD_TYPE_BOOL:
+                fprintf(out_file, "    Option(_Bool)");
+                break;
+            case FIELD_TYPE_STRING:
+                fprintf(out_file, "    Option(JsonString)");
+                break;
+            case FIELD_TYPE_STRUCT:
+                fprintf(out_file, "    Option(%.*s)", MD_S8VArg(f->struct_field_type_ref->string));
+                break;
+        }
+    } else if (f->is_array) {
+        fprintf(out_file, "    long %.*s;\n", MD_S8VArg(f->array_count_name));
+        switch (f->type.value) {
+            case FIELD_TYPE_I32:
+                fprintf(out_file, "    long *");
+                break;
+            case FIELD_TYPE_F32:
+                fprintf(out_file, "    float *");
+                break;
+            case FIELD_TYPE_BOOL:
+                fprintf(out_file, "    _Bool *");
+                break;
+            case FIELD_TYPE_STRING:
+                fprintf(out_file, "    JsonString *");
+                break;
+            case FIELD_TYPE_STRUCT:
+                fprintf(out_file, "    %.*s *", MD_S8VArg(f->struct_field_type_ref->string));
+                break;
+        }
+    } else {
+        switch (f->type.value) {
+            case FIELD_TYPE_I32:
+                fprintf(out_file, "    long");
+                break;
+            case FIELD_TYPE_F32:
+                fprintf(out_file, "    float");
+                break;
+            case FIELD_TYPE_BOOL:
+                fprintf(out_file, "    _Bool");
+                break;
+            case FIELD_TYPE_STRING:
+                fprintf(out_file, "    JsonString");
+                break;
+            case FIELD_TYPE_STRUCT:
+                fprintf(out_file, "    %.*s", MD_S8VArg(f->struct_field_type_ref->string));
+                break;
+        }
+    }
+    fprintf(out_file, " %.*s;\n", MD_S8VArg(f->name));
+}
+
+void write_enum_to_file(Enum *e, FILE *out_file) {
+    if (out_file == 0) {
+        out_file = stdout;
+    }
+
+    // Create discrimination enum
+    fprintf(out_file, "typedef enum %.*sVariant {\n", MD_S8VArg(e->name));
+
+    for (int i=0;i<e->variant_count;i++) {
+        Field *f = &e->variants[i];
+
+        fprintf(out_file, "    %.*s_%.*s,\n", MD_S8VArg(e->name), MD_S8VArg(f->name));
+    }
+    fprintf(out_file, "} %.*sVariant;\n", MD_S8VArg(e->name));
+
+    // Create struct that holds the data
+    fprintf(out_file, "typedef struct %.*s {\n", MD_S8VArg(e->name));
+    fprintf(out_file, "    %.*sVariant type;\n", MD_S8VArg(e->name));
+    fprintf(out_file, "    union {\n");
+    for (int i=0;i<e->variant_count;i++) {
+        Field *f = &e->variants[i];
+
+        if (is_some(f->type)) {
+            write_field_to_file(f, out_file);
+        }
+    }
+    fprintf(out_file, "    };\n");
+    fprintf(out_file, "} %.*s;\n", MD_S8VArg(e->name));
+
+    fprintf(out_file, "GenerateOptionType(%.*s);\n", MD_S8VArg(e->name));
+}
+
 void write_struct_to_file(Struct *s, FILE *out_file) {
     if (out_file == 0) {
         out_file = stdout;
     }
 
-    // Generate options for struct types
-    // for (int i=0;i<s->field_count;i++) {
-    //     Field *f = &s->fields[i];
-
-    //     // Cheat duplicates by using the C-preprocessor
-    //     if (f->type == FIELD_TYPE_STRUCT) {
-    //         fprintf(out_file, "#ifndef _%.*sOption\n", MD_S8VArg(f->struct_field_type_ref->string)); 
-    //         fprintf(out_file, "#define _%.*sOption\n", MD_S8VArg(f->struct_field_type_ref->string)); 
-    //         fprintf(out_file, "GenerateOptionType(%.*s);\n", MD_S8VArg(f->struct_field_type_ref->string));
-    //         fprintf(out_file, "#endif\n"); 
-    //     }
-    // }
-
     fprintf(out_file, "typedef struct %.*s {\n", MD_S8VArg(s->name));
 
     for (int i=0;i<s->field_count;i++) {
         Field *f = &s->fields[i];
+        assert(is_some(f->type) && "struct requires type");
 
-        if (f->is_array && f->is_optional) {
-            fprintf(out_file, "    long %.*s;\n", MD_S8VArg(f->array_count_name));
-            switch (f->type) {
-                case FIELD_TYPE_I32:
-                    fprintf(out_file, "    Option(long *)");
-                    break;
-                case FIELD_TYPE_F32:
-                    fprintf(out_file, "    Option(float *)");
-                    break;
-                case FIELD_TYPE_BOOL:
-                    fprintf(out_file, "    Option(_Bool *)");
-                    break;
-                case FIELD_TYPE_STRING:
-                    fprintf(out_file, "    Option(JsonString *)");
-                    break;
-                case FIELD_TYPE_STRUCT:
-                    fprintf(out_file, "    Option(%.*s *)", MD_S8VArg(f->struct_field_type_ref->string));
-                    break;
-            }
-        } else if (f->is_optional) {
-            switch (f->type) {
-                case FIELD_TYPE_I32:
-                    fprintf(out_file, "    Option(long)");
-                    break;
-                case FIELD_TYPE_F32:
-                    fprintf(out_file, "    Option(float)");
-                    break;
-                case FIELD_TYPE_BOOL:
-                    fprintf(out_file, "    Option(_Bool)");
-                    break;
-                case FIELD_TYPE_STRING:
-                    fprintf(out_file, "    Option(JsonString)");
-                    break;
-                case FIELD_TYPE_STRUCT:
-                    fprintf(out_file, "    Option(%.*s)", MD_S8VArg(f->struct_field_type_ref->string));
-                    break;
-            }
-        } else if (f->is_array) {
-            fprintf(out_file, "    long %.*s;\n", MD_S8VArg(f->array_count_name));
-            switch (f->type) {
-                case FIELD_TYPE_I32:
-                    fprintf(out_file, "    long *");
-                    break;
-                case FIELD_TYPE_F32:
-                    fprintf(out_file, "    float *");
-                    break;
-                case FIELD_TYPE_BOOL:
-                    fprintf(out_file, "    _Bool *");
-                    break;
-                case FIELD_TYPE_STRING:
-                    fprintf(out_file, "    JsonString *");
-                    break;
-                case FIELD_TYPE_STRUCT:
-                    fprintf(out_file, "    %.*s *", MD_S8VArg(f->struct_field_type_ref->string));
-                    break;
-            }
-        } else {
-            switch (f->type) {
-                case FIELD_TYPE_I32:
-                    fprintf(out_file, "    long");
-                    break;
-                case FIELD_TYPE_F32:
-                    fprintf(out_file, "    float");
-                    break;
-                case FIELD_TYPE_BOOL:
-                    fprintf(out_file, "    _Bool");
-                    break;
-                case FIELD_TYPE_STRING:
-                    fprintf(out_file, "    JsonString");
-                    break;
-                case FIELD_TYPE_STRUCT:
-                    fprintf(out_file, "    %.*s", MD_S8VArg(f->struct_field_type_ref->string));
-                    break;
-            }
-        }
-        fprintf(out_file, " %.*s;\n", MD_S8VArg(f->name));
+        write_field_to_file(f, out_file);
     }
     fprintf(out_file, "} %.*s;\n", MD_S8VArg(s->name));
     fprintf(out_file, "GenerateOptionType(%.*s);\n", MD_S8VArg(s->name));
+}
+
+void write_serialized_field_to_file(Field *f, bool leading_comma, bool write_field_name, FILE *out_file) {
+    if (f->is_array) {
+        if (write_field_name) {
+            if (leading_comma) {
+                fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \",\\\"%.*s\\\":[\");\n", MD_S8VArg(f->name));
+            } else {
+                fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \"\\\"%.*s\\\":[\");\n", MD_S8VArg(f->name));
+            }
+        }
+        fprintf(out_file, "    for(int i=0;i<data->%.*s;i++) {\n", MD_S8VArg(f->array_count_name));
+        switch (f->type.value) {
+            case FIELD_TYPE_I32:
+                fprintf(out_file, "        serialize_integer_value(arena, buf, buf_size, index, data->%.*s[i], i > 0);\n", MD_S8VArg(f->name));
+                break;
+            case FIELD_TYPE_F32:
+                fprintf(out_file, "        serialize_float_value(arena, buf, buf_size, index, data->%.*s[i], i > 0);\n", MD_S8VArg(f->name));
+                break;
+            case FIELD_TYPE_BOOL:
+                fprintf(out_file, "        serialize_bool_value(arena, buf, buf_size, index, data->%.*s[i], i > 0);\n", MD_S8VArg(f->name));
+                break;
+            case FIELD_TYPE_STRING:
+                fprintf(out_file, "        serialize_string_value(arena, buf, buf_size, index, data->%.*s[i], i > 0);\n", MD_S8VArg(f->name));
+                break;
+            case FIELD_TYPE_STRUCT:
+                fprintf(out_file, "        serialize_json_%.*s(arena, &data->%.*s[i], buf, buf_size, index);\n", MD_S8VArg(f->struct_field_type_ref->string), MD_S8VArg(f->name));
+                break;
+        }
+        fprintf(out_file, "    }\n");
+        fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \"]\");\n");
+    } else {
+        const char *bool_string = leading_comma ? "true" : "false";
+
+        if (f->is_optional) {
+            switch (f->type.value) {
+                case FIELD_TYPE_I32:
+                    fprintf(out_file, "    serialize_integer_field_optional(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), bool_string);
+                    break;
+                case FIELD_TYPE_F32:
+                    fprintf(out_file, "    serialize_float_field_optional(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), bool_string);
+                    break;
+                case FIELD_TYPE_BOOL:
+                    fprintf(out_file, "    serialize_bool_field_optional(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), bool_string);
+                    break;
+                case FIELD_TYPE_STRING:
+                    fprintf(out_file, "    serialize_string_field_optional(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), bool_string);
+                    break;
+                case FIELD_TYPE_STRUCT:
+                    if (write_field_name) {
+                        if (leading_comma) {
+
+                            fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \",\\\"%.*s\\\":\");\n", MD_S8VArg(f->name));
+                        } else {
+                            fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \"\\\"%.*s\\\":\");\n", MD_S8VArg(f->name));
+                        }
+                    }
+                    fprintf(out_file, "    serialize_json_%.*s_optional(arena, &data->%.*s, buf, buf_size, index);\n", MD_S8VArg(f->struct_field_type_ref->string), MD_S8VArg(f->name));
+                    break;
+            }
+        } else {
+            switch (f->type.value) {
+                case FIELD_TYPE_I32:
+                    fprintf(out_file, "    serialize_integer_field(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), bool_string);
+                    break;
+                case FIELD_TYPE_F32:
+                    fprintf(out_file, "    serialize_float_field(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), bool_string);
+                    break;
+                case FIELD_TYPE_BOOL:
+                    fprintf(out_file, "    serialize_bool_field(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), bool_string);
+                    break;
+                case FIELD_TYPE_STRING:
+                    fprintf(out_file, "    serialize_string_field(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), bool_string);
+                    break;
+                case FIELD_TYPE_STRUCT:
+                    if (write_field_name) {
+                        if (leading_comma) {
+
+                            fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \",\\\"%.*s\\\":\");\n", MD_S8VArg(f->name));
+                        } else {
+                            fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \"\\\"%.*s\\\":\");\n", MD_S8VArg(f->name));
+                        }
+                    }
+                    fprintf(out_file, "    serialize_json_%.*s(arena, &data->%.*s, buf, buf_size, index);\n", MD_S8VArg(f->struct_field_type_ref->string), MD_S8VArg(f->name));
+                    break;
+            }
+        }
+    }
+}
+
+void write_enum_serializer_to_file(Enum *e, FILE *out_file) {
+    if (out_file == 0) {
+        out_file = stdout;
+    }
+
+    fprintf(out_file, "void serialize_json_%.*s(Arena *arena, %.*s *data, char *buf, const unsigned int buf_size, unsigned int *index) {\n", MD_S8VArg(e->name), MD_S8VArg(e->name));
+
+    fprintf(out_file, "    switch (data->type) {\n");
+    for (int i=0;i<e->variant_count;i++) {
+        Field *f = &e->variants[i];
+
+        fprintf(out_file, "        case %.*s_%.*s:\n", MD_S8VArg(e->name), MD_S8VArg(f->name));
+        if (is_some(f->type)) {
+            write_serialized_field_to_file(f, i>0, false, out_file);
+
+            if (is_some(e->tag_name)) {
+                fprintf(out_file, "            *index += snprintf(buf + *index, buf_size - *index, \",\\\"%.*s\\\": \\\"%.*s\\\"\");\n", MD_S8VArg(e->tag_name.value), MD_S8VArg(f->json_name));
+            }
+        } else if (is_some(e->tag_name)) {
+            fprintf(out_file, "            *index += snprintf(buf + *index, buf_size - *index, \"null\");\n");
+            fprintf(out_file, "            *index += snprintf(buf + *index, buf_size - *index, \",\\\"%.*s\\\": \\\"%.*s\\\"\");\n", MD_S8VArg(e->tag_name.value), MD_S8VArg(f->json_name));
+        } else {
+            fprintf(out_file, "            *index += snprintf(buf + *index, buf_size - *index, \"\\\"%.*s\\\"\");\n", MD_S8VArg(f->json_name));
+        }
+
+        fprintf(out_file, "    break;\n");
+    }
+    fprintf(out_file, "    }\n");
+
+    fprintf(out_file, "}\n");
+    fprintf(out_file, "GenerateOptionStructSerializeFunc(serialize_json_%.*s, %.*s);\n", MD_S8VArg(e->name), MD_S8VArg(e->name));
 }
 
 void write_struct_serializer_to_file(Struct *s, FILE *out_file) {
@@ -143,88 +301,9 @@ void write_struct_serializer_to_file(Struct *s, FILE *out_file) {
 
     for (int i=0;i<s->field_count;i++) {
         Field *f = &s->fields[i];
+        assert(is_some(f->type) && "struct requires type");
 
-        if (f->is_array) {
-            if (i > 0) {
-                fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \",\\\"%.*s\\\":[\");\n", MD_S8VArg(f->name));
-            } else {
-                fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \"\\\"%.*s\\\":[\");\n", MD_S8VArg(f->name));
-            }
-            fprintf(out_file, "    for(int i=0;i<data->%.*s;i++) {\n", MD_S8VArg(f->array_count_name));
-            switch (f->type) {
-                case FIELD_TYPE_I32:
-                    fprintf(out_file, "        serialize_integer_value(arena, buf, buf_size, index, data->%.*s[i], i > 0);\n", MD_S8VArg(f->name));
-                    break;
-                case FIELD_TYPE_F32:
-                    fprintf(out_file, "        serialize_float_value(arena, buf, buf_size, index, data->%.*s[i], i > 0);\n", MD_S8VArg(f->name));
-                    break;
-                case FIELD_TYPE_BOOL:
-                    fprintf(out_file, "        serialize_bool_value(arena, buf, buf_size, index, data->%.*s[i], i > 0);\n", MD_S8VArg(f->name));
-                    break;
-                case FIELD_TYPE_STRING:
-                    fprintf(out_file, "        serialize_string_value(arena, buf, buf_size, index, data->%.*s[i], i > 0);\n", MD_S8VArg(f->name));
-                    break;
-                case FIELD_TYPE_STRUCT:
-                    fprintf(out_file, "        serialize_json_%.*s(arena, &data->%.*s[i], buf, buf_size, index);\n", MD_S8VArg(f->struct_field_type_ref->string), MD_S8VArg(f->name));
-                    break;
-            }
-            fprintf(out_file, "    }\n");
-            fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \"]\");\n");
-        } else {
-            const char *leading_comma = i > 0 ? "true" : "false";
-
-            if (f->is_optional) {
-                switch (f->type) {
-                    case FIELD_TYPE_I32:
-                        fprintf(out_file, "    serialize_integer_field_optional(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), leading_comma);
-                        break;
-                    case FIELD_TYPE_F32:
-                        fprintf(out_file, "    serialize_float_field_optional(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), leading_comma);
-                        break;
-                    case FIELD_TYPE_BOOL:
-                        fprintf(out_file, "    serialize_bool_field_optional(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), leading_comma);
-                        break;
-                    case FIELD_TYPE_STRING:
-                        fprintf(out_file, "    serialize_string_field_optional(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), leading_comma);
-                        break;
-                    case FIELD_TYPE_STRUCT:
-                        if (i > 0) {
-
-                            fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \",\\\"%.*s\\\":\");\n", MD_S8VArg(f->name));
-                        } else {
-                            fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \"\\\"%.*s\\\":\");\n", MD_S8VArg(f->name));
-                        }
-                        fprintf(out_file, "    serialize_json_%.*s_optional(arena, &data->%.*s, buf, buf_size, index);\n", MD_S8VArg(f->struct_field_type_ref->string), MD_S8VArg(f->name));
-                        break;
-                }
-            } else {
-                switch (f->type) {
-                    case FIELD_TYPE_I32:
-                        fprintf(out_file, "    serialize_integer_field(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), leading_comma);
-                        break;
-                    case FIELD_TYPE_F32:
-                        fprintf(out_file, "    serialize_float_field(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), leading_comma);
-                        break;
-                    case FIELD_TYPE_BOOL:
-                        fprintf(out_file, "    serialize_bool_field(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), leading_comma);
-                        break;
-                    case FIELD_TYPE_STRING:
-                        fprintf(out_file, "    serialize_string_field(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), leading_comma);
-                        break;
-                    case FIELD_TYPE_STRUCT:
-                        if (i > 0) {
-
-                            fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \",\\\"%.*s\\\":\");\n", MD_S8VArg(f->name));
-                        } else {
-                            fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \"\\\"%.*s\\\":\");\n", MD_S8VArg(f->name));
-                        }
-                        fprintf(out_file, "    serialize_json_%.*s(arena, &data->%.*s, buf, buf_size, index);\n", MD_S8VArg(f->struct_field_type_ref->string), MD_S8VArg(f->name));
-                        break;
-                }
-            }
-
-        }
-
+        write_serialized_field_to_file(f, i!=0, true, out_file);
     }
 
     fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \"}\");\n");
@@ -245,6 +324,7 @@ void write_struct_parser_to_file(Struct *s, FILE *out_file) {
 
     for (int i=0;i<s->field_count;i++) {
         Field *f = &s->fields[i];
+        assert(is_some(f->type) && "struct requires type");
 
         if (f->is_optional) {
             // fprintf(out_file, "    bool %.*s_is_some;\n", MD_S8VArg(f->name));
@@ -258,7 +338,7 @@ void write_struct_parser_to_file(Struct *s, FILE *out_file) {
 
         // TODO: check for duplicate fields
         if (f->is_array) {
-            switch (f->type) {
+            switch (f->type.value) {
                 case FIELD_TYPE_I32:
                     fprintf(out_file,
                         "if (is_jsoneq(json, &tokens[*index], \"%.*s\", %llu) && tokens[*index+1].type == JSMN_ARRAY) {\n", MD_S8VArg(f->name), f->name.size);
@@ -415,7 +495,7 @@ void write_struct_parser_to_file(Struct *s, FILE *out_file) {
                     break;
             }
         } else {
-            switch (f->type) {
+            switch (f->type.value) {
                 case FIELD_TYPE_I32:
                     fprintf(out_file,
                         "if (is_jsoneq(json, &tokens[*index], \"%.*s\", %llu) && tokens[*index+1].type == JSMN_PRIMITIVE) {\n", MD_S8VArg(f->name), f->name.size);
@@ -510,7 +590,7 @@ void write_struct_parser_to_file(Struct *s, FILE *out_file) {
                                 "            new_struct.%.*s = (JsonString){ tokens[*index].end - tokens[*index].start, json+tokens[*index].start };\n", MD_S8VArg(f->name));
                     }
 
-                    fprintf(out_file, 
+                    fprintf(out_file,
                         "            *index += 1;\n"
                         "        }\n");
                     break;
@@ -561,6 +641,80 @@ void write_struct_parser_to_file(Struct *s, FILE *out_file) {
     fprintf(out_file, "}\n");
 }
 
+void write_enum_parser_to_file(Enum *e, FILE *out_file) {
+    if (out_file == 0) {
+        out_file = stdout;
+    }
+
+    fprintf(out_file, "%.*s parse_json_%.*s(Arena *arena, const char *json, const jsmntok_t *tokens, unsigned int *index) {}\n", MD_S8VArg(e->name), MD_S8VArg(e->name));
+}
+
+Field generate_field(MD_Arena *arena, MD_Node *node) {
+    Field new_field = {0};
+    new_field.name = node->string;
+
+    MD_Node *rename_tag = MD_TagFromString(node, MD_S8Lit("jsonRename"), 0);
+    if(!MD_NodeIsNil(rename_tag)) {
+        new_field.json_name = rename_tag->first_child->string;
+    } else {
+        new_field.json_name = node->string;
+    }
+
+    MD_Node *type_node = node->first_child;
+    if (!MD_NodeIsNil(type_node)) {
+        MD_Node *option_tag = MD_TagFromString(type_node, MD_S8Lit("option"), 0);
+        new_field.is_optional = !MD_NodeIsNil(option_tag);
+
+        MD_Node *array_tag = MD_TagFromString(type_node, MD_S8Lit("array"), 0);
+        if (!MD_NodeIsNil(array_tag)) {
+            new_field.is_array = true;
+            new_field.array_count_name = array_tag->first_child->string;
+        }
+
+        if (MD_S8Match(type_node->string, MD_S8Lit("i32"), 0)) {
+            new_field.type = Some(FieldType, FIELD_TYPE_I32);
+        } else if (MD_S8Match(type_node->string, MD_S8Lit("f32"), 0)) {
+            new_field.type = Some(FieldType, FIELD_TYPE_F32);
+        } else if (MD_S8Match(type_node->string, MD_S8Lit("bool"), 0)) {
+            new_field.type = Some(FieldType, FIELD_TYPE_BOOL);
+        } else if (MD_S8Match(type_node->string, MD_S8Lit("string"), 0)) {
+            new_field.type = Some(FieldType, FIELD_TYPE_STRING);
+        } else {
+            new_field.type = Some(FieldType, FIELD_TYPE_STRUCT);
+            new_field.struct_field_type_ref = type_node;
+        }
+    } else {
+        new_field.type = None(FieldType);
+    }
+
+    return new_field;
+}
+
+Enum generate_enum(MD_Arena *arena, MD_Node *node) {
+    unsigned int num_variants = MD_ChildCountFromNode(node);
+    unsigned int current_variant = 0;
+
+    Option(MD_String8) tag_name = None(MD_String8);
+    MD_Node *tag_node = MD_TagFromString(node, MD_S8Lit("enum"), 0);
+    if (!MD_NodeIsNil(tag_node) && !MD_NodeIsNil(tag_node->first_child)) {
+        tag_name = Some(MD_String8, tag_node->first_child->string);
+    }
+
+    Enum new_enum = {
+        node->string,
+        tag_name,
+        num_variants,
+        MD_PushArray(arena, Field, num_variants)
+    };
+
+    for (MD_EachNode(enum_variant, node->first_child)) {
+        new_enum.variants[current_variant] = generate_field(arena, enum_variant);
+        current_variant += 1;
+    }
+
+    return new_enum;
+}
+
 Struct generate_struct(MD_Arena *arena, MD_Node *node) {
     unsigned int num_fields = MD_ChildCountFromNode(node);
     unsigned int current_field = 0;
@@ -571,37 +725,11 @@ Struct generate_struct(MD_Arena *arena, MD_Node *node) {
     };
 
     for (MD_EachNode(struct_field, node->first_child)) {
-        MD_Node *field_child = struct_field->first_child;
-        Field new_field = {};
-        new_field.name = struct_field->string;
-
-        MD_Node *option_tag = MD_TagFromString(field_child, MD_S8Lit("option"), 0);
-        new_field.is_optional = !MD_NodeIsNil(option_tag);
-
-        MD_Node *array_tag = MD_TagFromString(field_child, MD_S8Lit("array"), 0);
-        if (!MD_NodeIsNil(array_tag)) {
-            new_field.is_array = true;
-            new_field.array_count_name = array_tag->first_child->string;
-        }
-
-        if (MD_S8Match(field_child->string, MD_S8Lit("i32"), 0)) {
-            new_field.type = FIELD_TYPE_I32;
-        } else if (MD_S8Match(field_child->string, MD_S8Lit("f32"), 0)) {
-            new_field.type = FIELD_TYPE_F32;
-        } else if (MD_S8Match(field_child->string, MD_S8Lit("bool"), 0)) {
-            new_field.type = FIELD_TYPE_BOOL;
-        } else if (MD_S8Match(field_child->string, MD_S8Lit("string"), 0)) {
-            new_field.type = FIELD_TYPE_STRING;
-        } else {
-            new_field.type = FIELD_TYPE_STRUCT;
-            new_field.struct_field_type_ref = field_child;
-        }
-
-        new_struct.fields[current_field] = new_field;
+        new_struct.fields[current_field] = generate_field(arena, struct_field);
         current_field += 1;
     }
 
-   return new_struct;
+    return new_struct;
 }
 
 void generate_types(MD_Node *root, const char *output_path) {
@@ -610,6 +738,10 @@ void generate_types(MD_Node *root, const char *output_path) {
     unsigned int current_struct = 0;
     unsigned int num_structs = MD_ChildCountFromNode(root);
     Struct *structs = MD_PushArray(arena, Struct, num_structs);
+
+    unsigned int current_enum = 0;
+    unsigned int num_enums = MD_ChildCountFromNode(root);
+    Enum *enums = MD_PushArray(arena, Enum, num_enums);
 
     FILE *file = fopen(output_path, "w");
     if (file) {
@@ -621,7 +753,7 @@ void generate_types(MD_Node *root, const char *output_path) {
             "#include <limits.h>\n"
             "#include <math.h>\n"
             "#include <jsmn.h>\n"
-            "#include <better_structs/better_structs.h>\n\n"
+            "#include <better_structs/json.h>\n\n"
             "static void json_skip_object(const char *json, const jsmntok_t *tokens, unsigned int *index, bool is_array) {\n"
             "    const int num_children = tokens[*index].size;\n"
             "    // if the object was empty\n"
@@ -647,8 +779,7 @@ void generate_types(MD_Node *root, const char *output_path) {
     }
 
     for(MD_EachNode(node, root->first_child)) {
-        MD_Node *struct_tag = MD_TagFromString(node, MD_S8Lit("struct"), 0);
-        if (!MD_NodeIsNil(struct_tag)) {
+        if (MD_NodeHasTag(node, MD_S8Lit("struct"), 0)) {
             structs[current_struct] = generate_struct(arena, node);
             write_struct_to_file(&structs[current_struct], file);
             write_struct_parser_to_file(&structs[current_struct], file);
@@ -656,6 +787,15 @@ void generate_types(MD_Node *root, const char *output_path) {
             fprintf(file, "\n");
 
             current_struct += 1;
+        }
+        else if (MD_NodeHasTag(node, MD_S8Lit("enum"), 0)) {
+            enums[current_enum] = generate_enum(arena, node);
+            write_enum_to_file(&enums[current_enum], file);
+            write_enum_parser_to_file(&enums[current_enum], file);
+            write_enum_serializer_to_file(&enums[current_enum], file);
+            fprintf(file, "\n");
+
+            current_enum += 1;
         }
     }
 
