@@ -41,6 +41,8 @@ ReadResult lsp_read_from_server(Arena *arena, int *pipe, jsmntok_t *tokens, int 
             break;
     }
 
+    printf("\n--> %.*s\n", result.length, result.buf);
+
     int jsmn_result;
     jsmn_parser p;
     jsmn_init(&p);
@@ -50,6 +52,17 @@ ReadResult lsp_read_from_server(Arena *arena, int *pipe, jsmntok_t *tokens, int 
     }
 
     return result;
+}
+
+Option(LspServerResponse) lsp_poll_from_server(Arena *arena, int *to_client_pipe, int *to_server_pipe, jsmntok_t *tokens, int max_tokens) {
+    ReadResult result = lsp_read_from_server(arena, to_server_pipe, tokens, max_tokens);
+    if (result.status != READ_OK) {
+        fprintf(stderr, "Failed to read from server\n");
+        return None(LspServerResponse);
+    }
+
+    unsigned int parse_index = 0;
+    return parse_json_LspServerResponse(arena, result.buf, tokens, &parse_index, parse_index);
 }
 
 void lsp_send_initialize_message(Arena *arena, Option(JsonString) root_directory, int *pipe) {
@@ -90,21 +103,24 @@ void lsp_send_initialize_notification(Arena *arena, int *pipe) {
     lsp_send_client_message(arena, pipe, LspNotification, &req);
 }
 
-Option(LspInitializeResponse) lsp_initialize(Arena *arena, int *to_client_pipe, int *to_server_pipe, Option(JsonString) root_uri, jsmntok_t *tokens, int max_tokens) {
+Option(LspInitializeResult) lsp_initialize(Arena *arena, int *to_client_pipe, int *to_server_pipe, Option(JsonString) root_uri, jsmntok_t *tokens, int max_tokens) {
     lsp_send_initialize_message(arena, root_uri, to_client_pipe);
 
-    ReadResult result = lsp_read_from_server(arena, to_server_pipe, tokens, max_tokens);
-    if (result.status != READ_OK) {
-        fprintf(stderr, "Failed to read from server\n");
-        return None(LspInitializeResponse);
-    }
+    Option(LspServerResponse) response = lsp_poll_from_server(arena, to_client_pipe, to_server_pipe, tokens, max_tokens);
+    match_option(response, {
+        if (response.value.type == LspServerResponse_RequestResponse) {
+            if (response.value.RequestResponse.result.type == LspRequestResult_Initialize) {
+                lsp_send_initialize_notification(arena, to_client_pipe);
+                return Some(LspInitializeResult, response.value.RequestResponse.result.Initialize);
+            } 
+        }
 
-    unsigned int parse_index = 0;
-    LspInitializeResponse response = parse_json_LspInitializeResponse(arena, result.buf, tokens, &parse_index);
-
-    lsp_send_initialize_notification(arena, to_client_pipe);
-
-    return Some(LspInitializeResponse, response);
+        printf("Error: expected Initialize reponse\n");
+        return None(LspInitializeResult);
+    }, {
+        printf("Error: failed to parse response from server\n");
+        return None(LspInitializeResult);
+    });
 }
 
 void lsp_shutdown(Arena *arena, int *pipe) {
@@ -137,7 +153,7 @@ void lsp_open_file(Arena *arena, int *to_client_pipe, const char *file_path, Jso
     sprintf(file_uri, "file://%s", file_path);
 
     LspNotification req = (LspNotification) {
-        (JsonString) { 3, "2.0" },
+        MakeString("2.0"),
         (LspNotificationMethod) {
             .type = LspNotificationMethod_OpenFile,
             .OpenFile = (LspDidOpenTextDocumentParams) {
@@ -175,17 +191,21 @@ Option(LspDocumentSymbolsResponse) lsp_get_document_symbols(Arena *arena, int *t
     };
     lsp_send_client_message(arena, to_client_pipe, LspRequest, &req);
 
-    ReadResult result = lsp_read_from_server(arena, to_server_pipe, tokens, max_tokens);
-    result = lsp_read_from_server(arena, to_server_pipe, tokens, max_tokens);
-    if (result.status != READ_OK) {
-        fprintf(stderr, "Failed to read from server\n");
+    Option(LspServerResponse) response = lsp_poll_from_server(arena, to_client_pipe, to_server_pipe, tokens, max_tokens);
+    match_option(response, {
+        if (response.value.type == LspServerResponse_RequestResponse) {
+            if (response.value.RequestResponse.result.type == LspRequestResult_DocumentSymbols) {
+                lsp_send_initialize_notification(arena, to_client_pipe);
+                return Some(LspDocumentSymbolsResponse, response.value.RequestResponse.result.DocumentSymbols);
+            } 
+        }
+
+        printf("Error: expected textDocument/documentSymbol response\n");
         return None(LspDocumentSymbolsResponse);
-    }
-
-    unsigned int parse_index = 0;
-    LspDocumentSymbolsResponse response = parse_json_LspDocumentSymbolsResponse(arena, result.buf, tokens, &parse_index);
-
-    return Some(LspDocumentSymbolsResponse, response);
+    }, {
+        printf("Error: failed to parse response from server\n");
+        return None(LspDocumentSymbolsResponse);
+    });
 }
 
 #endif

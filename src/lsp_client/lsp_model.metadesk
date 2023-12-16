@@ -1,10 +1,49 @@
-// -------Client Side Requests-------
+// --- Client Side Requests ---
+
+// --- Document Symbols Request ---
 @struct LspTextDocument: {
     uri: string,
 }
 @struct LspDocumentSymbolsParams: {
-    textDocument: LspTextDocument,
+    @jsonRename("textDocument")
+    document: LspTextDocument,
 }
+// --- Document Symbols Request ---
+
+// --- Open File Request --
+@struct LspTextDocumentItem: {
+    uri: string,
+    @jsonRename("languageId")
+    language_id: string,
+    version: i32,
+    text: string,
+}
+@struct LspDidOpenTextDocumentParams: {
+    @jsonRename("textDocument")
+    document: LspTextDocumentItem,
+}
+// --- Open File Request --
+
+// -- Initialize Request ---
+@struct LspClientCapabilitiesWorkspace: {
+
+}
+@struct LspClientCapabilities: {
+    workspace: @option LspClientCapabilitiesWorkspace,
+}
+
+@struct LspInitializeRequestParams: {
+    capabilities: LspClientCapabilities,
+    @jsonRename("rootUri")
+    root_uri: @option string,
+    @jsonRename("processId")
+    process_id: i32,
+}
+// -- Initialize Request ---
+// --- Client Side Requests ---
+
+// --- Server Side Responses ---
+// --- Document Symbols Response ---
 @struct LspPosition: {
     line: i32,
     character: i32,
@@ -22,52 +61,36 @@
 	kind: i32;
 	location: LspLocation;
 }
-
 @struct LspDocumentSymbolsResponse: {
     result: @array(count) LspSymbolInformation;
 }
+// --- Document Symbols Response ---
 
-@struct LspTextDocumentItem: {
-    uri: string,
-    languageId: string,
-    version: i32,
-    text: string,
-}
-@struct LspDidOpenTextDocumentParams: {
-    textDocument: LspTextDocumentItem,
-}
-
-@struct LspClientCapabilitiesWorkspace: {
+// --- Diagnostics Response ---
+@struct LspDiagnosticsParams: {
 
 }
-@struct LspClientCapabilities: {
-    workspace: @option LspClientCapabilitiesWorkspace,
+// --- Diagnostics Response ---
+
+@struct LspServerInfo: {
+    name: string,
+    version: string,
+}
+@struct LspCapabilities: {
+}
+@struct LspInitializeResult: {
+    capabilities: LspCapabilities,
+    serverInfo: LspServerInfo,
+}
+@enum LspRequestResult: {
+    Initialize: LspInitializeResult,
+    DocumentSymbols: LspDocumentSymbolsResponse,
 }
 
-@struct LspInitializeRequestParams: {
-    capabilities: LspClientCapabilities,
-    rootUri: @option string,
-    processId: i32,
-}
-
-@enum("method") LspRequestMethod: {
-    @jsonRename("initialize")
-    Initialize: LspInitializeRequestParams,
-
-    @jsonRename("initialized")
-    Initialized,
-
-    @jsonRename("shutdown")
-    Shutdown,
-
-    @jsonRename("exit")
-    Exit,
-
-    @jsonRename("textDocument/didOpen")
-    OpenFile: LspDidOpenTextDocumentParams,
-
-    @jsonRename("textDocument/documentSymbol")
-    GetDocumentSymbols: LspDocumentSymbolsParams,
+@struct LspRequestResponse: {
+    id: i32,
+    jsonrpc: string,
+    result: LspRequestResult,
 }
 
 @enum("method") LspNotificationMethod: {
@@ -79,6 +102,33 @@
 
     @jsonRename("textDocument/didOpen")
     OpenFile: LspDidOpenTextDocumentParams,
+
+    @jsonRename("textDocument/publishDiagnostics")
+    Diagnostics: LspDiagnosticsParams,
+}
+@struct LspNotification: {
+    jsonrpc: string,
+    params: LspNotificationMethod,
+}
+
+@enum LspServerResponse: {
+    Notification: LspNotification,
+    RequestResponse: LspRequestResponse,
+}
+// --- Server Side Responses ---
+
+@enum("method") LspRequestMethod: {
+    @jsonRename("initialize")
+    Initialize: LspInitializeRequestParams,
+
+    @jsonRename("shutdown")
+    Shutdown,
+
+    @jsonRename("textDocument/didOpen")
+    OpenFile: LspDidOpenTextDocumentParams,
+
+    @jsonRename("textDocument/documentSymbol")
+    GetDocumentSymbols: LspDocumentSymbolsParams,
 }
 
 @struct LspRequest: {
@@ -86,29 +136,3 @@
     jsonrpc: string,
     params: LspRequestMethod,
 }
-
-@struct LspNotification: {
-    jsonrpc: string,
-    params: LspNotificationMethod,
-}
-// ----------------------------------
-
-// -------Server Side Requests-------
-@struct LspServerInfo: {
-    name: string,
-    version: string,
-}
-
-@struct LspCapabilities: {
-}
-@struct LspInitializeResult: {
-    capabilities: LspCapabilities,
-    serverInfo: LspServerInfo,
-}
-
-@struct LspInitializeResponse: {
-    id: i32,
-    jsonrpc: string,
-    result: LspInitializeResult,
-}
-// ----------------------------------

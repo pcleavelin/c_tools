@@ -135,6 +135,7 @@ void write_enum_to_file(Enum *e, FILE *out_file) {
         fprintf(out_file, "    %.*s_%.*s,\n", MD_S8VArg(e->name), MD_S8VArg(f->name));
     }
     fprintf(out_file, "} %.*sVariant;\n", MD_S8VArg(e->name));
+    fprintf(out_file, "GenerateOptionType(%.*sVariant);\n", MD_S8VArg(e->name));
 
     // Create struct that holds the data
     fprintf(out_file, "typedef struct %.*s {\n", MD_S8VArg(e->name));
@@ -174,9 +175,9 @@ void write_serialized_field_to_file(Field *f, bool leading_comma, bool write_fie
     if (f->is_array) {
         if (write_field_name) {
             if (leading_comma) {
-                fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \",\\\"%.*s\\\":[\");\n", MD_S8VArg(f->name));
+                fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \",\\\"%.*s\\\":[\");\n", MD_S8VArg(f->json_name));
             } else {
-                fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \"\\\"%.*s\\\":[\");\n", MD_S8VArg(f->name));
+                fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \"\\\"%.*s\\\":[\");\n", MD_S8VArg(f->json_name));
             }
         }
         fprintf(out_file, "    for(int i=0;i<data->%.*s;i++) {\n", MD_S8VArg(f->array_count_name));
@@ -205,24 +206,24 @@ void write_serialized_field_to_file(Field *f, bool leading_comma, bool write_fie
         if (f->is_optional) {
             switch (f->type.value) {
                 case FIELD_TYPE_I32:
-                    fprintf(out_file, "    serialize_integer_field_optional(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), bool_string);
+                    fprintf(out_file, "    serialize_integer_field_optional(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->json_name), MD_S8VArg(f->name), bool_string);
                     break;
                 case FIELD_TYPE_F32:
-                    fprintf(out_file, "    serialize_float_field_optional(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), bool_string);
+                    fprintf(out_file, "    serialize_float_field_optional(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->json_name), MD_S8VArg(f->name), bool_string);
                     break;
                 case FIELD_TYPE_BOOL:
-                    fprintf(out_file, "    serialize_bool_field_optional(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), bool_string);
+                    fprintf(out_file, "    serialize_bool_field_optional(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->json_name), MD_S8VArg(f->name), bool_string);
                     break;
                 case FIELD_TYPE_STRING:
-                    fprintf(out_file, "    serialize_string_field_optional(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), bool_string);
+                    fprintf(out_file, "    serialize_string_field_optional(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->json_name), MD_S8VArg(f->name), bool_string);
                     break;
                 case FIELD_TYPE_STRUCT:
                     if (write_field_name) {
                         if (leading_comma) {
 
-                            fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \",\\\"%.*s\\\":\");\n", MD_S8VArg(f->name));
+                            fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \",\\\"%.*s\\\":\");\n", MD_S8VArg(f->json_name));
                         } else {
-                            fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \"\\\"%.*s\\\":\");\n", MD_S8VArg(f->name));
+                            fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \"\\\"%.*s\\\":\");\n", MD_S8VArg(f->json_name));
                         }
                     }
                     fprintf(out_file, "    serialize_json_%.*s_optional(arena, &data->%.*s, buf, buf_size, index);\n", MD_S8VArg(f->struct_field_type_ref->string), MD_S8VArg(f->name));
@@ -231,24 +232,24 @@ void write_serialized_field_to_file(Field *f, bool leading_comma, bool write_fie
         } else {
             switch (f->type.value) {
                 case FIELD_TYPE_I32:
-                    fprintf(out_file, "    serialize_integer_field(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), bool_string);
+                    fprintf(out_file, "    serialize_integer_field(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->json_name), MD_S8VArg(f->name), bool_string);
                     break;
                 case FIELD_TYPE_F32:
-                    fprintf(out_file, "    serialize_float_field(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), bool_string);
+                    fprintf(out_file, "    serialize_float_field(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->json_name), MD_S8VArg(f->name), bool_string);
                     break;
                 case FIELD_TYPE_BOOL:
-                    fprintf(out_file, "    serialize_bool_field(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), bool_string);
+                    fprintf(out_file, "    serialize_bool_field(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->json_name), MD_S8VArg(f->name), bool_string);
                     break;
                 case FIELD_TYPE_STRING:
-                    fprintf(out_file, "    serialize_string_field(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->name), MD_S8VArg(f->name), bool_string);
+                    fprintf(out_file, "    serialize_string_field(arena, buf, buf_size, index, \"%.*s\", data->%.*s, %s);\n", MD_S8VArg(f->json_name), MD_S8VArg(f->name), bool_string);
                     break;
                 case FIELD_TYPE_STRUCT:
                     if (write_field_name) {
                         if (leading_comma) {
 
-                            fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \",\\\"%.*s\\\":\");\n", MD_S8VArg(f->name));
+                            fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \",\\\"%.*s\\\":\");\n", MD_S8VArg(f->json_name));
                         } else {
-                            fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \"\\\"%.*s\\\":\");\n", MD_S8VArg(f->name));
+                            fprintf(out_file, "    *index += snprintf(buf + *index, buf_size - *index, \"\\\"%.*s\\\":\");\n", MD_S8VArg(f->json_name));
                         }
                     }
                     fprintf(out_file, "    serialize_json_%.*s(arena, &data->%.*s, buf, buf_size, index);\n", MD_S8VArg(f->struct_field_type_ref->string), MD_S8VArg(f->name));
@@ -311,46 +312,27 @@ void write_struct_serializer_to_file(Struct *s, FILE *out_file) {
     fprintf(out_file, "GenerateOptionStructSerializeFunc(serialize_json_%.*s, %.*s);\n", MD_S8VArg(s->name), MD_S8VArg(s->name));
 }
 
-void write_struct_parser_to_file(Struct *s, FILE *out_file) {
+void write_field_parser_to_file(Field *f, MD_String8 field_parent_name, bool check_field_name, FILE *out_file) {
     if (out_file == 0) {
         out_file = stdout;
     }
 
-    fprintf(out_file, "%.*s parse_json_%.*s(Arena *arena, const char *json, const jsmntok_t *tokens, unsigned int *index) {\n", MD_S8VArg(s->name), MD_S8VArg(s->name));
-    fprintf(out_file, "    %.*s new_struct = {};\n", MD_S8VArg(s->name));
-    fprintf(out_file, "    int num_children = tokens[*index].size;\n    *index += 1;\n");
-    fprintf(out_file, "    long num_parsed_fields = 0;\n");
-    fprintf(out_file, "    for(int i=0;i<num_children;i++) {\n");
-
-    for (int i=0;i<s->field_count;i++) {
-        Field *f = &s->fields[i];
-        assert(is_some(f->type) && "struct requires type");
-
-        if (f->is_optional) {
-            // fprintf(out_file, "    bool %.*s_is_some;\n", MD_S8VArg(f->name));
-        }
-
-        if (i > 0) {
-            fprintf(out_file, "        else ");
-        } else {
-            fprintf(out_file, "        ");
-        }
-
-        // TODO: check for duplicate fields
-        if (f->is_array) {
-            switch (f->type.value) {
-                case FIELD_TYPE_I32:
+    if (f->is_array) {
+        switch (f->type.value) {
+            case FIELD_TYPE_I32:
+                if (check_field_name) {
                     fprintf(out_file,
-                        "if (is_jsoneq(json, &tokens[*index], \"%.*s\", %llu) && tokens[*index+1].type == JSMN_ARRAY) {\n", MD_S8VArg(f->name), f->name.size);
-                    fprintf(out_file,
+                            "if (is_jsoneq(json, &tokens[*index], \"%.*s\", %llu) && tokens[*index+1].type == JSMN_ARRAY) {\n", MD_S8VArg(f->name), f->name.size);
+                }
+                fprintf(out_file,
                         "            const int array_size = tokens[*index+1].size;\n"
                         "            *index += 2;\n"
                         "            new_struct.%.*s = arena_allocate_block(arena, sizeof(long) * array_size);\n"
                         "            new_struct.%.*s = array_size;\n"
                         "            for (int i=0;i<array_size;i++) {\n"
-                    , MD_S8VArg(f->name), MD_S8VArg(f->array_count_name));
+                        , MD_S8VArg(f->name), MD_S8VArg(f->array_count_name));
 
-                    fprintf(out_file,
+                fprintf(out_file,
                         "                if(tokens[*index].type == JSMN_PRIMITIVE) {\n"
                         "                    long value = 0;\n"
                         "                    errno = 0;\n"
@@ -368,25 +350,31 @@ void write_struct_parser_to_file(Struct *s, FILE *out_file) {
                         "                    fprintf(stderr, \"JSON parse error: Expected json type 'i32' for '%.*s', found object\\n\");\n"
                         "                    exit(1);\n"
                         "                }\n"
-                    , MD_S8VArg(f->name), MD_S8VArg(f->name), MD_S8VArg(f->name), MD_S8VArg(f->name));
+                        , MD_S8VArg(f->name), MD_S8VArg(f->name), MD_S8VArg(f->name), MD_S8VArg(f->name));
 
-                    fprintf(out_file,
+                fprintf(out_file,
                         "            }\n"
-                        "            num_parsed_fields += 1;\n"
-                        "        }\n");
-                    break;
-                case FIELD_TYPE_F32:
+                        "            num_parsed_fields += 1;\n");
+
+                if (check_field_name) {
                     fprintf(out_file,
-                        "if (is_jsoneq(json, &tokens[*index], \"%.*s\", %llu) && tokens[*index+1].type == JSMN_ARRAY) {\n", MD_S8VArg(f->name), f->name.size);
+                            "        }\n");
+                }
+                break;
+            case FIELD_TYPE_F32:
+                if (check_field_name) {
                     fprintf(out_file,
+                            "if (is_jsoneq(json, &tokens[*index], \"%.*s\", %llu) && tokens[*index+1].type == JSMN_ARRAY) {\n", MD_S8VArg(f->name), f->name.size);
+                }
+                fprintf(out_file,
                         "            const int array_size = tokens[*index+1].size;\n"
                         "            *index += 2;\n"
                         "            new_struct.%.*s = arena_allocate_block(arena, sizeof(float) * array_size);\n"
                         "            new_struct.%.*s = array_size;\n"
                         "            for (int i=0;i<array_size;i++) {\n"
-                    , MD_S8VArg(f->name), MD_S8VArg(f->array_count_name));
+                        , MD_S8VArg(f->name), MD_S8VArg(f->array_count_name));
 
-                    fprintf(out_file,
+                fprintf(out_file,
                         "                if(tokens[*index].type == JSMN_PRIMITIVE) {\n"
                         "                    float value = 0;\n"
                         "                    errno = 0;\n"
@@ -404,25 +392,30 @@ void write_struct_parser_to_file(Struct *s, FILE *out_file) {
                         "                    fprintf(stderr, \"JSON parse error: Expected json type 'f32' for '%.*s'\\n\");\n"
                         "                    exit(1);\n"
                         "                }\n"
-                    , MD_S8VArg(f->name), MD_S8VArg(f->name), MD_S8VArg(f->name), MD_S8VArg(f->name));
+                        , MD_S8VArg(f->name), MD_S8VArg(f->name), MD_S8VArg(f->name), MD_S8VArg(f->name));
 
-                    fprintf(out_file,
+                fprintf(out_file,
                         "            }\n"
-                        "            num_parsed_fields += 1;\n"
-                        "        }\n");
-                    break;
-                case FIELD_TYPE_BOOL:
+                        "            num_parsed_fields += 1;\n");
+
+                if (check_field_name) {
                     fprintf(out_file,
-                        "if (is_jsoneq(json, &tokens[*index], \"%.*s\", %llu) && tokens[*index+1].type == JSMN_ARRAY) {\n", MD_S8VArg(f->name), f->name.size);
-                    fprintf(out_file,
+                            "        }\n");
+                }
+                break;
+            case FIELD_TYPE_BOOL:
+                if (check_field_name) {
+                    fprintf(out_file, "if (is_jsoneq(json, &tokens[*index], \"%.*s\", %llu) && tokens[*index+1].type == JSMN_ARRAY) {\n", MD_S8VArg(f->name), f->name.size);
+                }
+                fprintf(out_file,
                         "            const int array_size = tokens[*index+1].size;\n"
                         "            *index += 2;\n"
                         "            new_struct.%.*s = arena_allocate_block(arena, sizeof(bool) * array_size);\n"
                         "            new_struct.%.*s = array_size;\n"
                         "            for (int i=0;i<array_size;i++) {\n"
-                    , MD_S8VArg(f->name), MD_S8VArg(f->array_count_name));
+                        , MD_S8VArg(f->name), MD_S8VArg(f->array_count_name));
 
-                    fprintf(out_file,
+                fprintf(out_file,
                         "                if(tokens[*index].type == JSMN_PRIMITIVE) {\n"
                         "                    char text = json[tokens[*index].start];\n"
                         "                    if (text != 't' && text != 'f') {\n"
@@ -435,25 +428,31 @@ void write_struct_parser_to_file(Struct *s, FILE *out_file) {
                         "                    fprintf(stderr, \"JSON parse error: Expected json type 'f32' for '%.*s'\\n\");\n"
                         "                    exit(1);\n"
                         "                }\n"
-                    , MD_S8VArg(f->name), MD_S8VArg(f->name), MD_S8VArg(f->name));
+                        , MD_S8VArg(f->name), MD_S8VArg(f->name), MD_S8VArg(f->name));
 
-                    fprintf(out_file,
+                fprintf(out_file,
                         "            }\n"
-                        "            num_parsed_fields += 1;\n"
-                        "        }\n");
-                    break;
-                case FIELD_TYPE_STRING:
+                        "            num_parsed_fields += 1;\n");
+
+                if (check_field_name) {
                     fprintf(out_file,
-                        "if (is_jsoneq(json, &tokens[*index], \"%.*s\", %llu) && tokens[*index+1].type == JSMN_ARRAY) {\n", MD_S8VArg(f->name), f->name.size);
+                            "        }\n");
+                }
+                break;
+            case FIELD_TYPE_STRING:
+                if (check_field_name) {
                     fprintf(out_file,
+                            "if (is_jsoneq(json, &tokens[*index], \"%.*s\", %llu) && tokens[*index+1].type == JSMN_ARRAY) {\n", MD_S8VArg(f->name), f->name.size);
+                }
+                fprintf(out_file,
                         "            const int array_size = tokens[*index+1].size;\n"
                         "            *index += 2;\n"
                         "            new_struct.%.*s = arena_allocate_block(arena, sizeof(JsonString) * array_size);\n"
                         "            new_struct.%.*s = array_size;\n"
                         "            for (int i=0;i<array_size;i++) {\n"
-                    , MD_S8VArg(f->name), MD_S8VArg(f->array_count_name));
+                        , MD_S8VArg(f->name), MD_S8VArg(f->array_count_name));
 
-                    fprintf(out_file,
+                fprintf(out_file,
                         "                if(tokens[*index].type == JSMN_STRING) {\n"
                         "                    new_struct.%.*s[i] = (JsonString){ tokens[*index].end - tokens[*index].start, json+tokens[*index].start };\n"
                         "                    *index += 1;\n"
@@ -461,46 +460,63 @@ void write_struct_parser_to_file(Struct *s, FILE *out_file) {
                         "                    fprintf(stderr, \"JSON parse error: Expected json type 'string' in array '%.*s'\\n\");\n"
                         "                    exit(1);\n"
                         "                }\n"
-                    , MD_S8VArg(f->name), MD_S8VArg(f->name));
+                        , MD_S8VArg(f->name), MD_S8VArg(f->name));
 
-                    fprintf(out_file,
+                fprintf(out_file,
                         "            }\n"
-                        "            num_parsed_fields += 1;\n"
-                        "        }\n");
-                    break;
-                case FIELD_TYPE_STRUCT:
+                        "            num_parsed_fields += 1;\n");
+
+                if (check_field_name) {
                     fprintf(out_file,
-                        "if (is_jsoneq(json, &tokens[*index], \"%.*s\", %llu) && tokens[*index+1].type == JSMN_ARRAY) {\n", MD_S8VArg(f->name), f->name.size);
+                            "        }\n");
+                }
+                break;
+            case FIELD_TYPE_STRUCT:
+                if (check_field_name) {
                     fprintf(out_file,
+                            "if (is_jsoneq(json, &tokens[*index], \"%.*s\", %llu) && tokens[*index+1].type == JSMN_ARRAY) {\n", MD_S8VArg(f->name), f->name.size);
+                }
+                fprintf(out_file,
                         "            const int array_size = tokens[*index+1].size;\n"
                         "            *index += 2;\n"
                         "            new_struct.%.*s = arena_allocate_block(arena, sizeof(%.*s) * array_size);\n"
                         "            new_struct.%.*s = array_size;\n"
                         "            for (int i=0;i<array_size;i++) {\n"
-                    , MD_S8VArg(f->name), MD_S8VArg(f->struct_field_type_ref->string), MD_S8VArg(f->array_count_name));
+                        , MD_S8VArg(f->name), MD_S8VArg(f->struct_field_type_ref->string), MD_S8VArg(f->array_count_name));
 
-                    fprintf(out_file,
+                fprintf(out_file,
                         "                if(tokens[*index].type == JSMN_OBJECT) {\n"
-                        "                    new_struct.%.*s[i] = parse_json_%.*s(arena, json, tokens, index);\n"
+                        "                    Option(%.*s) parsed_struct = parse_json_%.*s(arena, json, tokens, index, this_index);\n"
+                        "                    if (is_none(parsed_struct)) {\n"
+                        "                        fprintf(stderr, \"JSON Parse Error: failed to parse object %.*s in array\\n\");\n"
+                        "                        return None(%.*s);\n"
+                        "                    }\n"
+                        "                    new_struct.%.*s[i] = parsed_struct.value;\n"
                         "                } else {\n"
                         "                    fprintf(stderr, \"JSON parse error: Expected json type '%.*s' in array '%.*s'\\n\");\n"
                         "                    exit(1);\n"
                         "                }\n"
-                    , MD_S8VArg(f->name), MD_S8VArg(f->struct_field_type_ref->string), MD_S8VArg(f->struct_field_type_ref->string), MD_S8VArg(f->name));
+                        , MD_S8VArg(f->struct_field_type_ref->string), MD_S8VArg(f->struct_field_type_ref->string), MD_S8VArg(f->struct_field_type_ref->string), MD_S8VArg(field_parent_name), MD_S8VArg(f->name), MD_S8VArg(f->struct_field_type_ref->string), MD_S8VArg(f->name));
 
-                    fprintf(out_file,
+                fprintf(out_file,
                         "            }\n"
-                        "            num_parsed_fields += 1;\n"
-                        "        }\n");
-                    break;
-            }
-        } else {
-            switch (f->type.value) {
-                case FIELD_TYPE_I32:
+                        "            num_parsed_fields += 1;\n");
+
+                if (check_field_name) {
                     fprintf(out_file,
-                        "if (is_jsoneq(json, &tokens[*index], \"%.*s\", %llu) && tokens[*index+1].type == JSMN_PRIMITIVE) {\n", MD_S8VArg(f->name), f->name.size);
-                    fprintf(out_file, "            *index += 1;\n");
+                            "        }\n");
+                }
+                break;
+        }
+    } else {
+        switch (f->type.value) {
+            case FIELD_TYPE_I32:
+                if (check_field_name) {
                     fprintf(out_file,
+                            "if (is_jsoneq(json, &tokens[*index], \"%.*s\", %llu) && tokens[*index+1].type == JSMN_PRIMITIVE) {\n", MD_S8VArg(f->name), f->name.size);
+                }
+                fprintf(out_file, "            *index += 1;\n");
+                fprintf(out_file,
                         "            long value = 0;\n"
                         "            errno = 0;\n"
                         "            value = strtol(json + tokens[*index].start, 0, 10);\n"
@@ -511,24 +527,30 @@ void write_struct_parser_to_file(Struct *s, FILE *out_file) {
                         "                fprintf(stderr, \"JSON parse error: value==MAX: Expected json type 'i32'\\n\");\n"
                         "                exit(1);\n"
                         "            }\n\n"
-                        "            *index += 1;\n"
-                        "            num_parsed_fields += 1;\n");
+                        "            *index += 1;\n");
 
-                    if (f->is_optional) {
-                        fprintf(out_file,
-                                "            new_struct.%.*s = Some(long, value);\n"
-                                "        }\n", MD_S8VArg(f->name));
-                    } else {
-                        fprintf(out_file,
-                                "            new_struct.%.*s = value;\n"
-                                "        }\n", MD_S8VArg(f->name));
-                    }
-                    break;
-                case FIELD_TYPE_F32:
+                if (f->is_optional) {
                     fprintf(out_file,
-                        "if (is_jsoneq(json, &tokens[*index], \"%.*s\", %llu) && tokens[*index+1].type == JSMN_PRIMITIVE) {\n", MD_S8VArg(f->name), f->name.size);
-                    fprintf(out_file, "            *index += 1;\n");
+                            "            new_struct.%.*s = Some(long, value);\n",
+                            MD_S8VArg(f->name));
+                } else {
                     fprintf(out_file,
+                            "            new_struct.%.*s = value;\n",
+                            MD_S8VArg(f->name));
+                    fprintf(out_file, "            num_parsed_fields += 1;\n");
+                }
+
+                if (check_field_name) {
+                    fprintf(out_file, "    }\n");
+                }
+                break;
+            case FIELD_TYPE_F32:
+                if (check_field_name) {
+                    fprintf(out_file,
+                            "if (is_jsoneq(json, &tokens[*index], \"%.*s\", %llu) && tokens[*index+1].type == JSMN_PRIMITIVE) {\n", MD_S8VArg(f->name), f->name.size);
+                }
+                fprintf(out_file, "            *index += 1;\n");
+                fprintf(out_file,
                         "            float value = 0;\n"
                         "            errno = 0;\n"
                         "            value = strtof(json + tokens[*index].start, 0);\n"
@@ -539,83 +561,147 @@ void write_struct_parser_to_file(Struct *s, FILE *out_file) {
                         "                fprintf(stderr, \"JSON parse error: Expected json type 'f32'\\n\");\n"
                         "                exit(1);\n"
                         "            }\n\n"
-                        "            *index += 1;\n"
-                        "            num_parsed_fields += 1;\n");
+                        "            *index += 1;\n");
 
-                    if (f->is_optional) {
-                        fprintf(out_file,
-                                "            new_struct.%.*s = Some(float, value);\n"
-                                "        }\n", MD_S8VArg(f->name));
-                    } else {
-                        fprintf(out_file,
-                                "            new_struct.%.*s = value;\n"
-                                "        }\n", MD_S8VArg(f->name));
-                    }
-                    break;
-                case FIELD_TYPE_BOOL:
+                if (f->is_optional) {
                     fprintf(out_file,
-                        "if (is_jsoneq(json, &tokens[*index], \"%.*s\", %llu) && tokens[*index+1].type == JSMN_PRIMITIVE) {\n", MD_S8VArg(f->name), f->name.size);
-                    fprintf(out_file, "            *index += 1;\n");
+                            "            new_struct.%.*s = Some(float, value);\n" ,
+                            MD_S8VArg(f->name));
+                } else {
                     fprintf(out_file,
+                            "            new_struct.%.*s = value;\n" ,
+                            MD_S8VArg(f->name));
+                    fprintf(out_file, "            num_parsed_fields += 1;\n");
+                }
+
+                if (check_field_name) {
+                    fprintf(out_file, "    }\n");
+                }
+                break;
+            case FIELD_TYPE_BOOL:
+                if (check_field_name) {
+                    fprintf(out_file,
+                            "if (is_jsoneq(json, &tokens[*index], \"%.*s\", %llu) && tokens[*index+1].type == JSMN_PRIMITIVE) {\n", MD_S8VArg(f->name), f->name.size);
+                }
+                fprintf(out_file, "            *index += 1;\n");
+                fprintf(out_file,
                         "            char text = json[tokens[*index].start];\n"
                         "            if (text != 't' && text != 'f') {\n"
                         "                fprintf(stderr, \"JSON parse error: Expected json type 'bool'\\n\");\n"
                         "                exit(1);\n"
                         "            }\n\n"
-                        "            *index += 1;\n"
-                        "            num_parsed_fields += 1;\n");
-
-                    if (f->is_optional) {
-                        fprintf(out_file,
-                                "            new_struct.%.*s = Some(_Bool, text == 't');\n"
-                                "        }\n", MD_S8VArg(f->name));
-                    } else {
-                        fprintf(out_file,
-                                "            new_struct.%.*s = text == 't';\n"
-                                "        }\n", MD_S8VArg(f->name));
-                    }
-                    break;
-                case FIELD_TYPE_STRING:
-                    fprintf(out_file,
-                        "if (is_jsoneq(json, &tokens[*index], \"%.*s\", %llu) && tokens[*index+1].type == JSMN_STRING) {\n", MD_S8VArg(f->name), f->name.size);
-                    fprintf(out_file,
-                        "            *index += 1;\n"
-                        "            num_parsed_fields += 1;\n");
-
-                    if (f->is_optional) {
-                        fprintf(out_file,
-                                "            new_struct.%.*s = Some(JsonString, ((JsonString){ tokens[*index].end - tokens[*index].start, json+tokens[*index].start }));\n", MD_S8VArg(f->name));
-                    } else {
-                        fprintf(out_file,
-                                "            new_struct.%.*s = (JsonString){ tokens[*index].end - tokens[*index].start, json+tokens[*index].start };\n", MD_S8VArg(f->name));
-                    }
-
-                    fprintf(out_file,
-                        "            *index += 1;\n"
-                        "        }\n");
-                    break;
-                case FIELD_TYPE_STRUCT:
-                    fprintf(out_file,
-                        "if (is_jsoneq(json, &tokens[*index], \"%.*s\", %llu) && tokens[*index+1].type == JSMN_OBJECT) {\n", MD_S8VArg(f->name), f->name.size);
-                    fprintf(out_file,
                         "            *index += 1;\n");
 
-                    if (f->is_optional) {
-                        fprintf(out_file,
-                                "            new_struct.%.*s = Some(%.*s, parse_json_%.*s(arena, json, tokens, index));\n"
-                                , MD_S8VArg(f->name), MD_S8VArg(f->struct_field_type_ref->string), MD_S8VArg(f->struct_field_type_ref->string));
-                    } else {
-                        fprintf(out_file,
-                                "            new_struct.%.*s = parse_json_%.*s(arena, json, tokens, index);\n"
-                                , MD_S8VArg(f->name), MD_S8VArg(f->struct_field_type_ref->string));
-                    }
-
+                if (f->is_optional) {
                     fprintf(out_file,
-                            "            num_parsed_fields += 1;\n"
-                            "        }\n");
-                    break;
-            }
+                            "            new_struct.%.*s = Some(_Bool, text == 't');\n" ,
+                            MD_S8VArg(f->name));
+                } else {
+                    fprintf(out_file,
+                            "            new_struct.%.*s = text == 't';\n",
+                            MD_S8VArg(f->name));
+                    fprintf(out_file, "            num_parsed_fields += 1;\n");
+                }
+
+                if (check_field_name) {
+                    fprintf(out_file, "    }\n");
+                }
+                break;
+            case FIELD_TYPE_STRING:
+                if (check_field_name) {
+                    fprintf(out_file,
+                            "if (is_jsoneq(json, &tokens[*index], \"%.*s\", %llu) && tokens[*index+1].type == JSMN_STRING) {\n", MD_S8VArg(f->name), f->name.size);
+                }
+                fprintf(out_file,
+                        "            *index += 1;\n");
+
+                if (f->is_optional) {
+                    fprintf(out_file,
+                            "            new_struct.%.*s = Some(JsonString, ((JsonString){ tokens[*index].end - tokens[*index].start, json+tokens[*index].start }));\n", MD_S8VArg(f->name));
+                } else {
+                    fprintf(out_file,
+                            "            new_struct.%.*s = (JsonString){ tokens[*index].end - tokens[*index].start, json+tokens[*index].start };\n", MD_S8VArg(f->name));
+                    fprintf(out_file, "            num_parsed_fields += 1;\n");
+                }
+
+                fprintf(out_file,
+                        "            *index += 1;\n");
+                if (check_field_name) {
+                    fprintf(out_file, "        }\n");
+                }
+                break;
+            case FIELD_TYPE_STRUCT:
+                if (check_field_name) {
+                    fprintf(out_file,
+                            "if (is_jsoneq(json, &tokens[*index], \"%.*s\", %llu) && tokens[*index+1].type == JSMN_OBJECT) {\n", MD_S8VArg(f->name), f->name.size);
+                }
+                fprintf(out_file,
+                        "            *index += 1;\n");
+
+                fprintf(out_file,
+                        "            Option(%.*s) parsed_struct = parse_json_%.*s(arena, json, tokens, index, this_index);\n"
+                        "            if (is_none(parsed_struct)) {\n"
+                        "                fprintf(stderr, \"JSON Parse Error: failed to parse object %.*s\\n\");\n"
+                        "                return None(%.*s);\n"
+                        "            }\n"
+                        , MD_S8VArg(f->struct_field_type_ref->string), MD_S8VArg(f->struct_field_type_ref->string), MD_S8VArg(f->struct_field_type_ref->string), MD_S8VArg(field_parent_name));
+
+                if (f->is_optional) {
+                    fprintf(out_file,
+                            "            new_struct.%.*s = parsed_struct;\n"
+                            , MD_S8VArg(f->name));
+                } else {
+                    fprintf(out_file,
+                            "            new_struct.%.*s = parsed_struct.value;\n"
+                            , MD_S8VArg(f->name));
+                    fprintf(out_file, "            num_parsed_fields += 1;\n");
+                }
+
+                if (check_field_name) {
+                    fprintf(out_file, "        }\n");
+                }
+                break;
         }
+    }
+}
+
+void write_struct_parser_to_file(Struct *s, FILE *out_file) {
+    if (out_file == 0) {
+        out_file = stdout;
+    }
+
+    fprintf(out_file, "Option(%.*s) parse_json_%.*s(Arena *arena, const char *json, const jsmntok_t *tokens, unsigned int *index, unsigned int parent_index) {\n", MD_S8VArg(s->name), MD_S8VArg(s->name));
+    fprintf(out_file, "    int this_index = *index;\n");
+    fprintf(out_file, "    %.*s new_struct = {};\n", MD_S8VArg(s->name));
+    fprintf(out_file, "    int num_children = tokens[*index].size;\n    *index += 1;\n");
+    fprintf(out_file, "    long num_parsed_fields = 0;\n");
+
+    int num_required_fields = 0;
+    for (int i=0;i<s->field_count;i++) {
+        Field *f = &s->fields[i];
+        assert(is_some(f->type) && "struct requires type");
+
+        if (f->is_optional == false) {
+            // TODO
+            // fprintf(out_file, "    new_struct.%.*s = None(long);\n", MD_S8VArg(f->name));
+            num_required_fields += 1; 
+        }
+
+    }
+
+    fprintf(out_file, "    for(int i=0;i<num_children;i++) {\n");
+    for (int i=0;i<s->field_count;i++) {
+        Field *f = &s->fields[i];
+        assert(is_some(f->type) && "struct requires type");
+
+        if (i > 0) {
+            fprintf(out_file, "        else ");
+        } else {
+            fprintf(out_file, "        ");
+        }
+
+        // TODO: check for duplicate fields
+        write_field_parser_to_file(f, s->name, true, out_file);
     }
     // TODO: skip unknown item
     if (s->field_count > 0) {
@@ -634,19 +720,118 @@ void write_struct_parser_to_file(Struct *s, FILE *out_file) {
             "    }\n\n");
     fprintf(out_file,
             "    if (num_parsed_fields != %d) {\n"
-            "        fprintf(stderr, \"JSON parse error: Expected %d fields, got %%ld\\n\", num_parsed_fields);\n"
+            "        fprintf(stderr, \"JSON parse error: Expected %d fields, got %%ld for %.*s\\n\", num_parsed_fields);\n"
+            "        return None(%.*s);\n"
             "    }\n"
-            , s->field_count, s->field_count);
-    fprintf(out_file, "\n    return new_struct;\n");
+            , num_required_fields, num_required_fields, MD_S8VArg(s->name), MD_S8VArg(s->name));
+    fprintf(out_file, "\n    return Some(%.*s, new_struct);\n", MD_S8VArg(s->name));
     fprintf(out_file, "}\n");
 }
 
+// FIXME: this will only work for structs variants
 void write_enum_parser_to_file(Enum *e, FILE *out_file) {
     if (out_file == 0) {
         out_file = stdout;
     }
 
-    fprintf(out_file, "%.*s parse_json_%.*s(Arena *arena, const char *json, const jsmntok_t *tokens, unsigned int *index) {}\n", MD_S8VArg(e->name), MD_S8VArg(e->name));
+
+    fprintf(out_file, "Option(%.*sVariant) %.*sVariant_from_string(JsonString json_tag) {\n", MD_S8VArg(e->name), MD_S8VArg(e->name));
+    for (int i=0;i<e->variant_count;++i) {
+        Field *f = &e->variants[i];
+        if (i > 0) {
+            fprintf(out_file, "    else ");
+        } else {
+            fprintf(out_file, "    ");
+        }
+
+        fprintf(out_file, "if (MatchString(MakeString(\"%.*s\"), json_tag)) {\n", MD_S8VArg(f->json_name));
+        fprintf(out_file, "        return Some(%.*sVariant, %.*s_%.*s);\n", MD_S8VArg(e->name), MD_S8VArg(e->name), MD_S8VArg(f->name));
+        fprintf(out_file, "    }\n");
+    }
+    fprintf(out_file, "    return None(%.*sVariant);\n", MD_S8VArg(e->name));
+    fprintf(out_file, "}\n");
+
+    fprintf(out_file, "Option(%.*s) parse_json_%.*s(Arena *arena, const char *json, const jsmntok_t *tokens, unsigned int *index, unsigned int parent_index) {\n", MD_S8VArg(e->name), MD_S8VArg(e->name));
+    fprintf(out_file, "    int this_index = *index;\n");
+    fprintf(out_file, "    %.*s new_struct = {};\n", MD_S8VArg(e->name));
+    fprintf(out_file, "    int num_children = tokens[*index].size;\n");
+    fprintf(out_file, "    long num_parsed_fields = 0;\n");
+
+    if (is_some(e->tag_name)) {
+        // Find the enum tag from the parent object
+        fprintf(out_file, "    int num_parent_children = tokens[parent_index].size;\n    parent_index += 1;\n");
+        fprintf(out_file, "    bool found_enum_tag = false;\n");
+        fprintf(out_file, "    for(int i=0;i<num_parent_children;i++) {\n");
+        fprintf(out_file,
+                "        if (is_jsoneq(json, &tokens[parent_index], \"%.*s\", %llu) && tokens[parent_index+1].type == JSMN_STRING) {\n", MD_S8VArg(e->tag_name.value), e->tag_name.value.size);
+        fprintf(out_file, "            parent_index += 1;\n");
+        fprintf(out_file, "            JsonString variant_name = (JsonString){ tokens[parent_index].end - tokens[parent_index].start, json+tokens[parent_index].start };\n");
+        fprintf(out_file, "            Option(%.*sVariant) variant = %.*sVariant_from_string(variant_name);\n", MD_S8VArg(e->name), MD_S8VArg(e->name));
+        fprintf(out_file, "            if (is_some(variant)) {\n");
+        fprintf(out_file, "                new_struct.type = variant.value;\n");
+        //fprintf(out_file,
+        //        "            new_struct.%.*s = (JsonString){ tokens[parent_index].end - tokens[parent_index].start, json+tokens[parent_index].start };\n", MD_S8VArg(e->name));
+        fprintf(out_file, "                found_enum_tag = true;\n");
+        fprintf(out_file, "            } else { printf(\"no variant %%.*s for %.*sVariant\", variant_name.length, variant_name.text); exit(1); }\n", MD_S8VArg(e->name));
+        fprintf(out_file, "        } else if (tokens[parent_index+1].type == JSMN_OBJECT || tokens[parent_index+1].type == JSMN_ARRAY) {\n"
+            "        parent_index += 1;\n"
+            "        json_skip_object(json, tokens, &parent_index, tokens[parent_index].type == JSMN_ARRAY);\n"
+            "    } else {\n"
+            "        parent_index += 2;\n"
+            "    }\n");
+        fprintf(out_file, "    }\n");
+
+        bool already_if = false;
+        for (int i=0;i<e->variant_count;i++) {
+            Field *f = &e->variants[i];
+
+            if (is_some(f->type)) {
+                if (already_if) {
+                    fprintf(out_file, "    else ");
+                } else {
+                    already_if = true;
+                    fprintf(out_file, "    ");
+                }
+                fprintf(out_file, "if (new_struct.type == %.*s_%.*s) {\n", MD_S8VArg(e->name), MD_S8VArg(f->name));
+
+                // TODO: check for duplicate fields
+                write_field_parser_to_file(f, e->name, false, out_file);
+
+                fprintf(out_file, "\n    return Some(%.*s, new_struct);\n", MD_S8VArg(e->name));
+                fprintf(out_file, "    }\n");
+            }
+        }
+    } else {
+        for (int i=0;i<e->variant_count;i++) {
+            Field *f = &e->variants[i];
+
+            fprintf(out_file, "    {\n");
+            fprintf(out_file,
+                    "        Option(%.*s) parsed_struct = None(%.*s);\n"
+                    , MD_S8VArg(f->struct_field_type_ref->string), MD_S8VArg(f->struct_field_type_ref->string));
+
+            fprintf(out_file,
+                    "        parsed_struct = parse_json_%.*s(arena, json, tokens, index, this_index);\n"
+                    "        if (is_some(parsed_struct)) {\n"
+                    "            new_struct.type = %.*s_%.*s;\n"
+                    "            new_struct.%.*s = parsed_struct.value;\n"
+                    "            return Some(%.*s, new_struct);\n"
+                    "        }\n"
+                    "        *index = parent_index;\n"
+                    "    }\n"
+                    , MD_S8VArg(f->struct_field_type_ref->string), MD_S8VArg(e->name), MD_S8VArg(f->name), MD_S8VArg(f->name), MD_S8VArg(e->name));
+        }
+    }
+
+    fprintf(out_file,
+            "    if (tokens[*index+1].type == JSMN_OBJECT || tokens[*index+1].type == JSMN_ARRAY) {\n"
+            "        *index += 1;\n"
+            "        json_skip_object(json, tokens, index, tokens[*index].type == JSMN_ARRAY);\n"
+            "    } else {\n"
+            "        *index += 2;\n"
+            "    }\n");
+    fprintf(out_file, "\n    return None(%.*s);\n", MD_S8VArg(e->name));
+    fprintf(out_file, "}\n");
 }
 
 Field generate_field(MD_Arena *arena, MD_Node *node) {

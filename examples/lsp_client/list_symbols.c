@@ -67,11 +67,11 @@ int main(int argc, char *argv[]) {
     Arena json_arena = new_arena(sizeof(char)*1024*1024);
     jsmntok_t tokens[20000];
 
-    Option(LspInitializeResponse) response = lsp_initialize(&json_arena, to_client_pipe, to_server_pipe, Some(JsonString, ((JsonString) { strlen(argv[2]), argv[2] })), tokens, 20000);
+    Option(LspInitializeResult) response = lsp_initialize(&json_arena, to_client_pipe, to_server_pipe, Some(JsonString, ((JsonString) { strlen(argv[2]), argv[2] })), tokens, 20000);
 
-    match_option(LspInitializeResponse, response, {
-        printf("server name: %.*s\n", response.value.result.serverInfo.name.length, response.value.result.serverInfo.name.text);
-        printf("server version: %.*s\n", response.value.result.serverInfo.version.length, response.value.result.serverInfo.version.text);
+    match_option(response, {
+        printf("server name: %.*s\n", response.value.serverInfo.name.length, response.value.serverInfo.name.text);
+        printf("server version: %.*s\n", response.value.serverInfo.version.length, response.value.serverInfo.version.text);
     }, {
         fprintf(stderr, "Error when trying to initialize LSP Server");
         exit(1);
