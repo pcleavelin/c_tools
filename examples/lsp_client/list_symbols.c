@@ -81,11 +81,11 @@ int main(int argc, char *argv[]) {
     JsonString filename = MakeString(argv[3]);
     // TODO: change this to take in a JsonString
     lsp_open_file(&json_arena, to_client_pipe, argv[3], MakeString("c"));
-    Option(LspDocumentSymbolsResponse) symbols_response = lsp_get_document_symbols(&json_arena, to_client_pipe, to_server_pipe, filename, tokens, 20000);
+    Option(LspRequestResult) symbols_response = lsp_get_document_symbols(&json_arena, to_client_pipe, to_server_pipe, filename, tokens, 20000);
 
     if (is_some(symbols_response)) {
         for (int i=0;i<symbols_response.value.count;++i) {
-            LspSymbolInformation *si = &symbols_response.value.result[i];
+            LspSymbolInformation *si = &symbols_response.value.DocumentSymbols[i];
             printf("Kind: %ld, %.*s\n", si->kind, si->name.length, si->name.text);
         }
     }

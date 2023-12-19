@@ -169,7 +169,7 @@ void lsp_open_file(Arena *arena, int *to_client_pipe, const char *file_path, Jso
     lsp_send_client_message(arena, to_client_pipe, LspNotification, &req);
 }
 
-Option(LspDocumentSymbolsResponse) lsp_get_document_symbols(Arena *arena, int *to_client_pipe, int *to_server_pipe, JsonString file_path, jsmntok_t *tokens, int max_tokens) {
+Option(LspRequestResult) lsp_get_document_symbols(Arena *arena, int *to_client_pipe, int *to_server_pipe, JsonString file_path, jsmntok_t *tokens, int max_tokens) {
     const int file_uri_length = (7 + file_path.length);
     char *file_uri = arena_allocate_block(arena, sizeof(char) * file_uri_length);
     sprintf(file_uri, "file://%.*s", file_path.length, file_path.text);
@@ -191,21 +191,24 @@ Option(LspDocumentSymbolsResponse) lsp_get_document_symbols(Arena *arena, int *t
     };
     lsp_send_client_message(arena, to_client_pipe, LspRequest, &req);
 
-    Option(LspServerResponse) response = lsp_poll_from_server(arena, to_client_pipe, to_server_pipe, tokens, max_tokens);
-    match_option(response, {
-        if (response.value.type == LspServerResponse_RequestResponse) {
-            if (response.value.RequestResponse.result.type == LspRequestResult_DocumentSymbols) {
-                lsp_send_initialize_notification(arena, to_client_pipe);
-                return Some(LspDocumentSymbolsResponse, response.value.RequestResponse.result.DocumentSymbols);
-            } 
-        }
+    // lol, ignore everything except the document symbols response
+    while(true) {
+        Option(LspServerResponse) response = lsp_poll_from_server(arena, to_client_pipe, to_server_pipe, tokens, max_tokens);
+        match_option(response, {
+            if (response.value.type == LspServerResponse_RequestResponse) {
+                if (response.value.RequestResponse.result.type == LspRequestResult_DocumentSymbols) {
+                    lsp_send_initialize_notification(arena, to_client_pipe);
+                    return Some(LspRequestResult, response.value.RequestResponse.result);
+                } 
+            }
 
-        printf("Error: expected textDocument/documentSymbol response\n");
-        return None(LspDocumentSymbolsResponse);
-    }, {
-        printf("Error: failed to parse response from server\n");
-        return None(LspDocumentSymbolsResponse);
-    });
+            printf("Error: expected textDocument/documentSymbol response\n");
+            continue;
+        }, {
+            printf("Error: failed to parse response from server\n");
+            return None(LspRequestResult);
+        });
+    }
 }
 
 #endif

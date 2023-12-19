@@ -78,15 +78,17 @@ Option(LspDocumentSymbolsParams) parse_json_LspDocumentSymbolsParams(Arena *aren
     *index += 1;
     long num_parsed_fields = 0;
     for(int i=0;i<num_children;i++) {
-        if (is_jsoneq(json, &tokens[*index], "document", 8) && tokens[*index+1].type == JSMN_OBJECT) {
+        if (is_jsoneq(json, &tokens[*index], "textDocument", 12) && tokens[*index+1].type == JSMN_OBJECT) {
             *index += 1;
-            Option(LspTextDocument) parsed_struct = parse_json_LspTextDocument(arena, json, tokens, index, this_index);
-            if (is_none(parsed_struct)) {
+Option(LspTextDocument) parsed_struct = parse_json_LspTextDocument(arena, json, tokens, index, this_index);
+                if (is_some(parsed_struct)) {
+                    new_struct.document = parsed_struct.value;
+                    num_parsed_fields += 1;
+                }
+            else if (is_none(parsed_struct)) {
                 fprintf(stderr, "JSON Parse Error: failed to parse object LspTextDocument\n");
                 return None(LspDocumentSymbolsParams);
             }
-            new_struct.document = parsed_struct.value;
-            num_parsed_fields += 1;
         }
         else if (tokens[*index+1].type == JSMN_OBJECT || tokens[*index+1].type == JSMN_ARRAY) {
             *index += 1;
@@ -196,15 +198,17 @@ Option(LspDidOpenTextDocumentParams) parse_json_LspDidOpenTextDocumentParams(Are
     *index += 1;
     long num_parsed_fields = 0;
     for(int i=0;i<num_children;i++) {
-        if (is_jsoneq(json, &tokens[*index], "document", 8) && tokens[*index+1].type == JSMN_OBJECT) {
+        if (is_jsoneq(json, &tokens[*index], "textDocument", 12) && tokens[*index+1].type == JSMN_OBJECT) {
             *index += 1;
-            Option(LspTextDocumentItem) parsed_struct = parse_json_LspTextDocumentItem(arena, json, tokens, index, this_index);
-            if (is_none(parsed_struct)) {
+Option(LspTextDocumentItem) parsed_struct = parse_json_LspTextDocumentItem(arena, json, tokens, index, this_index);
+                if (is_some(parsed_struct)) {
+                    new_struct.document = parsed_struct.value;
+                    num_parsed_fields += 1;
+                }
+            else if (is_none(parsed_struct)) {
                 fprintf(stderr, "JSON Parse Error: failed to parse object LspTextDocumentItem\n");
                 return None(LspDidOpenTextDocumentParams);
             }
-            new_struct.document = parsed_struct.value;
-            num_parsed_fields += 1;
         }
         else if (tokens[*index+1].type == JSMN_OBJECT || tokens[*index+1].type == JSMN_ARRAY) {
             *index += 1;
@@ -273,12 +277,9 @@ Option(LspClientCapabilities) parse_json_LspClientCapabilities(Arena *arena, con
     for(int i=0;i<num_children;i++) {
         if (is_jsoneq(json, &tokens[*index], "workspace", 9) && tokens[*index+1].type == JSMN_OBJECT) {
             *index += 1;
-            Option(LspClientCapabilitiesWorkspace) parsed_struct = parse_json_LspClientCapabilitiesWorkspace(arena, json, tokens, index, this_index);
-            if (is_none(parsed_struct)) {
-                fprintf(stderr, "JSON Parse Error: failed to parse object LspClientCapabilitiesWorkspace\n");
-                return None(LspClientCapabilities);
-            }
+Option(LspClientCapabilitiesWorkspace) parsed_struct = parse_json_LspClientCapabilitiesWorkspace(arena, json, tokens, index, this_index);
             new_struct.workspace = parsed_struct;
+            num_parsed_fields += 1;
         }
         else if (tokens[*index+1].type == JSMN_OBJECT || tokens[*index+1].type == JSMN_ARRAY) {
             *index += 1;
@@ -318,13 +319,15 @@ Option(LspInitializeRequestParams) parse_json_LspInitializeRequestParams(Arena *
     for(int i=0;i<num_children;i++) {
         if (is_jsoneq(json, &tokens[*index], "capabilities", 12) && tokens[*index+1].type == JSMN_OBJECT) {
             *index += 1;
-            Option(LspClientCapabilities) parsed_struct = parse_json_LspClientCapabilities(arena, json, tokens, index, this_index);
-            if (is_none(parsed_struct)) {
+Option(LspClientCapabilities) parsed_struct = parse_json_LspClientCapabilities(arena, json, tokens, index, this_index);
+                if (is_some(parsed_struct)) {
+                    new_struct.capabilities = parsed_struct.value;
+                    num_parsed_fields += 1;
+                }
+            else if (is_none(parsed_struct)) {
                 fprintf(stderr, "JSON Parse Error: failed to parse object LspClientCapabilities\n");
                 return None(LspInitializeRequestParams);
             }
-            new_struct.capabilities = parsed_struct.value;
-            num_parsed_fields += 1;
         }
         else if (is_jsoneq(json, &tokens[*index], "root_uri", 8) && tokens[*index+1].type == JSMN_STRING) {
             *index += 1;
@@ -456,23 +459,27 @@ Option(LspRange) parse_json_LspRange(Arena *arena, const char *json, const jsmnt
     for(int i=0;i<num_children;i++) {
         if (is_jsoneq(json, &tokens[*index], "start", 5) && tokens[*index+1].type == JSMN_OBJECT) {
             *index += 1;
-            Option(LspPosition) parsed_struct = parse_json_LspPosition(arena, json, tokens, index, this_index);
-            if (is_none(parsed_struct)) {
+Option(LspPosition) parsed_struct = parse_json_LspPosition(arena, json, tokens, index, this_index);
+                if (is_some(parsed_struct)) {
+                    new_struct.start = parsed_struct.value;
+                    num_parsed_fields += 1;
+                }
+            else if (is_none(parsed_struct)) {
                 fprintf(stderr, "JSON Parse Error: failed to parse object LspPosition\n");
                 return None(LspRange);
             }
-            new_struct.start = parsed_struct.value;
-            num_parsed_fields += 1;
         }
         else if (is_jsoneq(json, &tokens[*index], "end", 3) && tokens[*index+1].type == JSMN_OBJECT) {
             *index += 1;
-            Option(LspPosition) parsed_struct = parse_json_LspPosition(arena, json, tokens, index, this_index);
-            if (is_none(parsed_struct)) {
+Option(LspPosition) parsed_struct = parse_json_LspPosition(arena, json, tokens, index, this_index);
+                if (is_some(parsed_struct)) {
+                    new_struct.end = parsed_struct.value;
+                    num_parsed_fields += 1;
+                }
+            else if (is_none(parsed_struct)) {
                 fprintf(stderr, "JSON Parse Error: failed to parse object LspPosition\n");
                 return None(LspRange);
             }
-            new_struct.end = parsed_struct.value;
-            num_parsed_fields += 1;
         }
         else if (tokens[*index+1].type == JSMN_OBJECT || tokens[*index+1].type == JSMN_ARRAY) {
             *index += 1;
@@ -519,13 +526,15 @@ Option(LspLocation) parse_json_LspLocation(Arena *arena, const char *json, const
         }
         else if (is_jsoneq(json, &tokens[*index], "range", 5) && tokens[*index+1].type == JSMN_OBJECT) {
             *index += 1;
-            Option(LspRange) parsed_struct = parse_json_LspRange(arena, json, tokens, index, this_index);
-            if (is_none(parsed_struct)) {
+Option(LspRange) parsed_struct = parse_json_LspRange(arena, json, tokens, index, this_index);
+                if (is_some(parsed_struct)) {
+                    new_struct.range = parsed_struct.value;
+                    num_parsed_fields += 1;
+                }
+            else if (is_none(parsed_struct)) {
                 fprintf(stderr, "JSON Parse Error: failed to parse object LspRange\n");
                 return None(LspLocation);
             }
-            new_struct.range = parsed_struct.value;
-            num_parsed_fields += 1;
         }
         else if (tokens[*index+1].type == JSMN_OBJECT || tokens[*index+1].type == JSMN_ARRAY) {
             *index += 1;
@@ -589,13 +598,15 @@ Option(LspSymbolInformation) parse_json_LspSymbolInformation(Arena *arena, const
     }
         else if (is_jsoneq(json, &tokens[*index], "location", 8) && tokens[*index+1].type == JSMN_OBJECT) {
             *index += 1;
-            Option(LspLocation) parsed_struct = parse_json_LspLocation(arena, json, tokens, index, this_index);
-            if (is_none(parsed_struct)) {
+Option(LspLocation) parsed_struct = parse_json_LspLocation(arena, json, tokens, index, this_index);
+                if (is_some(parsed_struct)) {
+                    new_struct.location = parsed_struct.value;
+                    num_parsed_fields += 1;
+                }
+            else if (is_none(parsed_struct)) {
                 fprintf(stderr, "JSON Parse Error: failed to parse object LspLocation\n");
                 return None(LspSymbolInformation);
             }
-            new_struct.location = parsed_struct.value;
-            num_parsed_fields += 1;
         }
         else if (tokens[*index+1].type == JSMN_OBJECT || tokens[*index+1].type == JSMN_ARRAY) {
             *index += 1;
@@ -641,13 +652,16 @@ Option(LspDocumentSymbolsResponse) parse_json_LspDocumentSymbolsResponse(Arena *
             new_struct.count = array_size;
             for (int i=0;i<array_size;i++) {
                 if(tokens[*index].type == JSMN_OBJECT) {
-                    Option(LspSymbolInformation) parsed_struct = parse_json_LspSymbolInformation(arena, json, tokens, index, this_index);
-                    if (is_none(parsed_struct)) {
-                        fprintf(stderr, "JSON Parse Error: failed to parse object LspSymbolInformation in array\n");
-                        return None(LspDocumentSymbolsResponse);
-                    }
+Option(LspSymbolInformation) parsed_struct = parse_json_LspSymbolInformation(arena, json, tokens, index, this_index);
+                if (is_some(parsed_struct)) {
                     new_struct.result[i] = parsed_struct.value;
-                } else {
+                }
+                else if (is_none(parsed_struct)) {
+                    fprintf(stderr, "JSON Parse Error: failed to parse object LspSymbolInformation in array\n");
+                    return None(LspDocumentSymbolsResponse);
+                }
+            }
+                else {
                     fprintf(stderr, "JSON parse error: Expected json type 'LspSymbolInformation' in array 'result'\n");
                     exit(1);
                 }
@@ -803,23 +817,27 @@ Option(LspInitializeResult) parse_json_LspInitializeResult(Arena *arena, const c
     for(int i=0;i<num_children;i++) {
         if (is_jsoneq(json, &tokens[*index], "capabilities", 12) && tokens[*index+1].type == JSMN_OBJECT) {
             *index += 1;
-            Option(LspCapabilities) parsed_struct = parse_json_LspCapabilities(arena, json, tokens, index, this_index);
-            if (is_none(parsed_struct)) {
+Option(LspCapabilities) parsed_struct = parse_json_LspCapabilities(arena, json, tokens, index, this_index);
+                if (is_some(parsed_struct)) {
+                    new_struct.capabilities = parsed_struct.value;
+                    num_parsed_fields += 1;
+                }
+            else if (is_none(parsed_struct)) {
                 fprintf(stderr, "JSON Parse Error: failed to parse object LspCapabilities\n");
                 return None(LspInitializeResult);
             }
-            new_struct.capabilities = parsed_struct.value;
-            num_parsed_fields += 1;
         }
         else if (is_jsoneq(json, &tokens[*index], "serverInfo", 10) && tokens[*index+1].type == JSMN_OBJECT) {
             *index += 1;
-            Option(LspServerInfo) parsed_struct = parse_json_LspServerInfo(arena, json, tokens, index, this_index);
-            if (is_none(parsed_struct)) {
+Option(LspServerInfo) parsed_struct = parse_json_LspServerInfo(arena, json, tokens, index, this_index);
+                if (is_some(parsed_struct)) {
+                    new_struct.serverInfo = parsed_struct.value;
+                    num_parsed_fields += 1;
+                }
+            else if (is_none(parsed_struct)) {
                 fprintf(stderr, "JSON Parse Error: failed to parse object LspServerInfo\n");
                 return None(LspInitializeResult);
             }
-            new_struct.serverInfo = parsed_struct.value;
-            num_parsed_fields += 1;
         }
         else if (tokens[*index+1].type == JSMN_OBJECT || tokens[*index+1].type == JSMN_ARRAY) {
             *index += 1;
@@ -853,9 +871,10 @@ typedef enum LspRequestResultVariant {
 GenerateOptionType(LspRequestResultVariant);
 typedef struct LspRequestResult {
     LspRequestResultVariant type;
+    long count;
     union {
     LspInitializeResult Initialize;
-    LspDocumentSymbolsResponse DocumentSymbols;
+    LspSymbolInformation * DocumentSymbols;
     };
 } LspRequestResult;
 GenerateOptionType(LspRequestResult);
@@ -874,24 +893,43 @@ Option(LspRequestResult) parse_json_LspRequestResult(Arena *arena, const char *j
     int num_children = tokens[*index].size;
     long num_parsed_fields = 0;
     {
-        Option(LspInitializeResult) parsed_struct = None(LspInitializeResult);
-        parsed_struct = parse_json_LspInitializeResult(arena, json, tokens, index, this_index);
-        if (is_some(parsed_struct)) {
-            new_struct.type = LspRequestResult_Initialize;
-            new_struct.Initialize = parsed_struct.value;
-            return Some(LspRequestResult, new_struct);
+*index -= 1;
+if (tokens[*index+1].type == JSMN_OBJECT) {
+            *index += 1;
+Option(LspInitializeResult) parsed_struct = parse_json_LspInitializeResult(arena, json, tokens, index, this_index);
+                if (is_some(parsed_struct)) {
+                    new_struct.Initialize = parsed_struct.value;
+                    num_parsed_fields += 1;
+                }
         }
-        *index = parent_index;
+if (num_parsed_fields > 0) {
+            new_struct.type = LspRequestResult_Initialize;
+            return Some(LspRequestResult, new_struct);
+}
+*index = this_index;
     }
     {
-        Option(LspDocumentSymbolsResponse) parsed_struct = None(LspDocumentSymbolsResponse);
-        parsed_struct = parse_json_LspDocumentSymbolsResponse(arena, json, tokens, index, this_index);
-        if (is_some(parsed_struct)) {
-            new_struct.type = LspRequestResult_DocumentSymbols;
-            new_struct.DocumentSymbols = parsed_struct.value;
-            return Some(LspRequestResult, new_struct);
+*index -= 1;
+if (tokens[*index+1].type == JSMN_ARRAY) {
+            const int array_size = tokens[*index+1].size;
+            *index += 2;
+            new_struct.DocumentSymbols = arena_allocate_block(arena, sizeof(LspSymbolInformation) * array_size);
+            new_struct.count = array_size;
+            for (int i=0;i<array_size;i++) {
+                if(tokens[*index].type == JSMN_OBJECT) {
+Option(LspSymbolInformation) parsed_struct = parse_json_LspSymbolInformation(arena, json, tokens, index, this_index);
+                if (is_some(parsed_struct)) {
+                    new_struct.DocumentSymbols[i] = parsed_struct.value;
+                }
+            }
+            }
+            num_parsed_fields += 1;
         }
-        *index = parent_index;
+if (num_parsed_fields > 0) {
+            new_struct.type = LspRequestResult_DocumentSymbols;
+            return Some(LspRequestResult, new_struct);
+}
+*index = this_index;
     }
     if (tokens[*index+1].type == JSMN_OBJECT || tokens[*index+1].type == JSMN_ARRAY) {
         *index += 1;
@@ -908,7 +946,10 @@ void serialize_json_LspRequestResult(Arena *arena, LspRequestResult *data, char 
     serialize_json_LspInitializeResult(arena, &data->Initialize, buf, buf_size, index);
     break;
         case LspRequestResult_DocumentSymbols:
-    serialize_json_LspDocumentSymbolsResponse(arena, &data->DocumentSymbols, buf, buf_size, index);
+    for(int i=0;i<data->count;i++) {
+        serialize_json_LspSymbolInformation(arena, &data->DocumentSymbols[i], buf, buf_size, index);
+    }
+    *index += snprintf(buf + *index, buf_size - *index, "]");
     break;
     }
 }
@@ -950,15 +991,17 @@ Option(LspRequestResponse) parse_json_LspRequestResponse(Arena *arena, const cha
             num_parsed_fields += 1;
             *index += 1;
         }
-        else if (is_jsoneq(json, &tokens[*index], "result", 6) && tokens[*index+1].type == JSMN_OBJECT) {
+        else if (is_jsoneq(json, &tokens[*index], "result", 6) && (tokens[*index+1].type == JSMN_OBJECT || tokens[*index+1].type == JSMN_ARRAY)) {
             *index += 1;
-            Option(LspRequestResult) parsed_struct = parse_json_LspRequestResult(arena, json, tokens, index, this_index);
-            if (is_none(parsed_struct)) {
+Option(LspRequestResult) parsed_struct = parse_json_LspRequestResult(arena, json, tokens, index, this_index);
+                if (is_some(parsed_struct)) {
+                    new_struct.result = parsed_struct.value;
+                    num_parsed_fields += 1;
+                }
+            else if (is_none(parsed_struct)) {
                 fprintf(stderr, "JSON Parse Error: failed to parse object LspRequestResult\n");
                 return None(LspRequestResponse);
             }
-            new_struct.result = parsed_struct.value;
-            num_parsed_fields += 1;
         }
         else if (tokens[*index+1].type == JSMN_OBJECT || tokens[*index+1].type == JSMN_ARRAY) {
             *index += 1;
@@ -1040,26 +1083,34 @@ Option(LspNotificationMethod) parse_json_LspNotificationMethod(Arena *arena, con
     }
     }
     if (new_struct.type == LspNotificationMethod_OpenFile) {
+if (tokens[*index+1].type == JSMN_OBJECT) {
             *index += 1;
-            Option(LspDidOpenTextDocumentParams) parsed_struct = parse_json_LspDidOpenTextDocumentParams(arena, json, tokens, index, this_index);
-            if (is_none(parsed_struct)) {
+Option(LspDidOpenTextDocumentParams) parsed_struct = parse_json_LspDidOpenTextDocumentParams(arena, json, tokens, index, this_index);
+                if (is_some(parsed_struct)) {
+                    new_struct.OpenFile = parsed_struct.value;
+                    num_parsed_fields += 1;
+                }
+            else if (is_none(parsed_struct)) {
                 fprintf(stderr, "JSON Parse Error: failed to parse object LspDidOpenTextDocumentParams\n");
                 return None(LspNotificationMethod);
             }
-            new_struct.OpenFile = parsed_struct.value;
-            num_parsed_fields += 1;
+        }
 
     return Some(LspNotificationMethod, new_struct);
     }
     else if (new_struct.type == LspNotificationMethod_Diagnostics) {
+if (tokens[*index+1].type == JSMN_OBJECT) {
             *index += 1;
-            Option(LspDiagnosticsParams) parsed_struct = parse_json_LspDiagnosticsParams(arena, json, tokens, index, this_index);
-            if (is_none(parsed_struct)) {
+Option(LspDiagnosticsParams) parsed_struct = parse_json_LspDiagnosticsParams(arena, json, tokens, index, this_index);
+                if (is_some(parsed_struct)) {
+                    new_struct.Diagnostics = parsed_struct.value;
+                    num_parsed_fields += 1;
+                }
+            else if (is_none(parsed_struct)) {
                 fprintf(stderr, "JSON Parse Error: failed to parse object LspDiagnosticsParams\n");
                 return None(LspNotificationMethod);
             }
-            new_struct.Diagnostics = parsed_struct.value;
-            num_parsed_fields += 1;
+        }
 
     return Some(LspNotificationMethod, new_struct);
     }
@@ -1112,15 +1163,17 @@ Option(LspNotification) parse_json_LspNotification(Arena *arena, const char *jso
             num_parsed_fields += 1;
             *index += 1;
         }
-        else if (is_jsoneq(json, &tokens[*index], "params", 6) && tokens[*index+1].type == JSMN_OBJECT) {
+        else if (is_jsoneq(json, &tokens[*index], "params", 6) && (tokens[*index+1].type == JSMN_OBJECT || tokens[*index+1].type == JSMN_ARRAY)) {
             *index += 1;
-            Option(LspNotificationMethod) parsed_struct = parse_json_LspNotificationMethod(arena, json, tokens, index, this_index);
-            if (is_none(parsed_struct)) {
+Option(LspNotificationMethod) parsed_struct = parse_json_LspNotificationMethod(arena, json, tokens, index, this_index);
+                if (is_some(parsed_struct)) {
+                    new_struct.params = parsed_struct.value;
+                    num_parsed_fields += 1;
+                }
+            else if (is_none(parsed_struct)) {
                 fprintf(stderr, "JSON Parse Error: failed to parse object LspNotificationMethod\n");
                 return None(LspNotification);
             }
-            new_struct.params = parsed_struct.value;
-            num_parsed_fields += 1;
         }
         else if (tokens[*index+1].type == JSMN_OBJECT || tokens[*index+1].type == JSMN_ARRAY) {
             *index += 1;
@@ -1147,24 +1200,24 @@ void serialize_json_LspNotification(Arena *arena, LspNotification *data, char *b
 GenerateOptionStructSerializeFunc(serialize_json_LspNotification, LspNotification);
 
 typedef enum LspServerResponseVariant {
-    LspServerResponse_Notification,
     LspServerResponse_RequestResponse,
+    LspServerResponse_Notification,
 } LspServerResponseVariant;
 GenerateOptionType(LspServerResponseVariant);
 typedef struct LspServerResponse {
     LspServerResponseVariant type;
     union {
-    LspNotification Notification;
     LspRequestResponse RequestResponse;
+    LspNotification Notification;
     };
 } LspServerResponse;
 GenerateOptionType(LspServerResponse);
 Option(LspServerResponseVariant) LspServerResponseVariant_from_string(JsonString json_tag) {
-    if (MatchString(MakeString("Notification"), json_tag)) {
-        return Some(LspServerResponseVariant, LspServerResponse_Notification);
-    }
-    else if (MatchString(MakeString("RequestResponse"), json_tag)) {
+    if (MatchString(MakeString("RequestResponse"), json_tag)) {
         return Some(LspServerResponseVariant, LspServerResponse_RequestResponse);
+    }
+    else if (MatchString(MakeString("Notification"), json_tag)) {
+        return Some(LspServerResponseVariant, LspServerResponse_Notification);
     }
     return None(LspServerResponseVariant);
 }
@@ -1174,24 +1227,36 @@ Option(LspServerResponse) parse_json_LspServerResponse(Arena *arena, const char 
     int num_children = tokens[*index].size;
     long num_parsed_fields = 0;
     {
-        Option(LspNotification) parsed_struct = None(LspNotification);
-        parsed_struct = parse_json_LspNotification(arena, json, tokens, index, this_index);
-        if (is_some(parsed_struct)) {
-            new_struct.type = LspServerResponse_Notification;
-            new_struct.Notification = parsed_struct.value;
-            return Some(LspServerResponse, new_struct);
+*index -= 1;
+if (tokens[*index+1].type == JSMN_OBJECT) {
+            *index += 1;
+Option(LspRequestResponse) parsed_struct = parse_json_LspRequestResponse(arena, json, tokens, index, this_index);
+                if (is_some(parsed_struct)) {
+                    new_struct.RequestResponse = parsed_struct.value;
+                    num_parsed_fields += 1;
+                }
         }
-        *index = parent_index;
+if (num_parsed_fields > 0) {
+            new_struct.type = LspServerResponse_RequestResponse;
+            return Some(LspServerResponse, new_struct);
+}
+*index = this_index;
     }
     {
-        Option(LspRequestResponse) parsed_struct = None(LspRequestResponse);
-        parsed_struct = parse_json_LspRequestResponse(arena, json, tokens, index, this_index);
-        if (is_some(parsed_struct)) {
-            new_struct.type = LspServerResponse_RequestResponse;
-            new_struct.RequestResponse = parsed_struct.value;
-            return Some(LspServerResponse, new_struct);
+*index -= 1;
+if (tokens[*index+1].type == JSMN_OBJECT) {
+            *index += 1;
+Option(LspNotification) parsed_struct = parse_json_LspNotification(arena, json, tokens, index, this_index);
+                if (is_some(parsed_struct)) {
+                    new_struct.Notification = parsed_struct.value;
+                    num_parsed_fields += 1;
+                }
         }
-        *index = parent_index;
+if (num_parsed_fields > 0) {
+            new_struct.type = LspServerResponse_Notification;
+            return Some(LspServerResponse, new_struct);
+}
+*index = this_index;
     }
     if (tokens[*index+1].type == JSMN_OBJECT || tokens[*index+1].type == JSMN_ARRAY) {
         *index += 1;
@@ -1204,11 +1269,11 @@ Option(LspServerResponse) parse_json_LspServerResponse(Arena *arena, const char 
 }
 void serialize_json_LspServerResponse(Arena *arena, LspServerResponse *data, char *buf, const unsigned int buf_size, unsigned int *index) {
     switch (data->type) {
-        case LspServerResponse_Notification:
-    serialize_json_LspNotification(arena, &data->Notification, buf, buf_size, index);
-    break;
         case LspServerResponse_RequestResponse:
     serialize_json_LspRequestResponse(arena, &data->RequestResponse, buf, buf_size, index);
+    break;
+        case LspServerResponse_Notification:
+    serialize_json_LspNotification(arena, &data->Notification, buf, buf_size, index);
     break;
     }
 }
@@ -1270,38 +1335,50 @@ Option(LspRequestMethod) parse_json_LspRequestMethod(Arena *arena, const char *j
     }
     }
     if (new_struct.type == LspRequestMethod_Initialize) {
+if (tokens[*index+1].type == JSMN_OBJECT) {
             *index += 1;
-            Option(LspInitializeRequestParams) parsed_struct = parse_json_LspInitializeRequestParams(arena, json, tokens, index, this_index);
-            if (is_none(parsed_struct)) {
+Option(LspInitializeRequestParams) parsed_struct = parse_json_LspInitializeRequestParams(arena, json, tokens, index, this_index);
+                if (is_some(parsed_struct)) {
+                    new_struct.Initialize = parsed_struct.value;
+                    num_parsed_fields += 1;
+                }
+            else if (is_none(parsed_struct)) {
                 fprintf(stderr, "JSON Parse Error: failed to parse object LspInitializeRequestParams\n");
                 return None(LspRequestMethod);
             }
-            new_struct.Initialize = parsed_struct.value;
-            num_parsed_fields += 1;
+        }
 
     return Some(LspRequestMethod, new_struct);
     }
     else if (new_struct.type == LspRequestMethod_OpenFile) {
+if (tokens[*index+1].type == JSMN_OBJECT) {
             *index += 1;
-            Option(LspDidOpenTextDocumentParams) parsed_struct = parse_json_LspDidOpenTextDocumentParams(arena, json, tokens, index, this_index);
-            if (is_none(parsed_struct)) {
+Option(LspDidOpenTextDocumentParams) parsed_struct = parse_json_LspDidOpenTextDocumentParams(arena, json, tokens, index, this_index);
+                if (is_some(parsed_struct)) {
+                    new_struct.OpenFile = parsed_struct.value;
+                    num_parsed_fields += 1;
+                }
+            else if (is_none(parsed_struct)) {
                 fprintf(stderr, "JSON Parse Error: failed to parse object LspDidOpenTextDocumentParams\n");
                 return None(LspRequestMethod);
             }
-            new_struct.OpenFile = parsed_struct.value;
-            num_parsed_fields += 1;
+        }
 
     return Some(LspRequestMethod, new_struct);
     }
     else if (new_struct.type == LspRequestMethod_GetDocumentSymbols) {
+if (tokens[*index+1].type == JSMN_OBJECT) {
             *index += 1;
-            Option(LspDocumentSymbolsParams) parsed_struct = parse_json_LspDocumentSymbolsParams(arena, json, tokens, index, this_index);
-            if (is_none(parsed_struct)) {
+Option(LspDocumentSymbolsParams) parsed_struct = parse_json_LspDocumentSymbolsParams(arena, json, tokens, index, this_index);
+                if (is_some(parsed_struct)) {
+                    new_struct.GetDocumentSymbols = parsed_struct.value;
+                    num_parsed_fields += 1;
+                }
+            else if (is_none(parsed_struct)) {
                 fprintf(stderr, "JSON Parse Error: failed to parse object LspDocumentSymbolsParams\n");
                 return None(LspRequestMethod);
             }
-            new_struct.GetDocumentSymbols = parsed_struct.value;
-            num_parsed_fields += 1;
+        }
 
     return Some(LspRequestMethod, new_struct);
     }
@@ -1372,15 +1449,17 @@ Option(LspRequest) parse_json_LspRequest(Arena *arena, const char *json, const j
             num_parsed_fields += 1;
             *index += 1;
         }
-        else if (is_jsoneq(json, &tokens[*index], "params", 6) && tokens[*index+1].type == JSMN_OBJECT) {
+        else if (is_jsoneq(json, &tokens[*index], "params", 6) && (tokens[*index+1].type == JSMN_OBJECT || tokens[*index+1].type == JSMN_ARRAY)) {
             *index += 1;
-            Option(LspRequestMethod) parsed_struct = parse_json_LspRequestMethod(arena, json, tokens, index, this_index);
-            if (is_none(parsed_struct)) {
+Option(LspRequestMethod) parsed_struct = parse_json_LspRequestMethod(arena, json, tokens, index, this_index);
+                if (is_some(parsed_struct)) {
+                    new_struct.params = parsed_struct.value;
+                    num_parsed_fields += 1;
+                }
+            else if (is_none(parsed_struct)) {
                 fprintf(stderr, "JSON Parse Error: failed to parse object LspRequestMethod\n");
                 return None(LspRequest);
             }
-            new_struct.params = parsed_struct.value;
-            num_parsed_fields += 1;
         }
         else if (tokens[*index+1].type == JSMN_OBJECT || tokens[*index+1].type == JSMN_ARRAY) {
             *index += 1;

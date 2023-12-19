@@ -9,7 +9,9 @@ To help with making parsing JSON in C not be an absolute boiler-plate nightmare,
  - [x] Supports `Option`al types (a-la Rust)
  - [x] Expand Rust-like enums (discriminated unions) into a similar C structure
      - [x] Serialize Enums to JSON
-     - [ ] Deserialize Enums
+     - [x] Deserialize Enums
+         - [x] Tagged
+         - [x] Un-tagged
 
 # The LSP Client
 A very quick and dirty implementation of an LSP client that aims to be a learning experience as well as used in my modal text editor written from scratch (not in this repo...yet c:). This heavily uses `Better Structs`.

@@ -84,7 +84,7 @@
 }
 @enum LspRequestResult: {
     Initialize: LspInitializeResult,
-    DocumentSymbols: LspDocumentSymbolsResponse,
+    DocumentSymbols: @array(count) LspSymbolInformation,
 }
 
 @struct LspRequestResponse: {
@@ -112,8 +112,8 @@
 }
 
 @enum LspServerResponse: {
-    Notification: LspNotification,
     RequestResponse: LspRequestResponse,
+    Notification: LspNotification,
 }
 // --- Server Side Responses ---
 
